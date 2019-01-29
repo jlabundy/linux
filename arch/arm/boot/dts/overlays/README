@@ -2476,6 +2476,22 @@ Params: card_name               Override the default, "IQAudIODigi", card name.
                                 dai stream name.
 
 
+Name:   iqs323
+Info:   Enables I2C connected Azoteq IQS323 capacitive/inductive sensing con-
+        troller using GPIO 4 (pin 7 on GPIO header) for shared interrupt and
+        reset.
+Load:   dtoverlay=iqs323,<param>=<val>
+Params: interrupt               GPIO used for interrupt/reset (default 4)
+        slider                  Select the IQS323EV02 slider board and report
+                                raw slider coordinates
+        gestures                Select the IQS323EV02 slider board and report
+                                slider gestures (e.g. media keys)
+        buttons                 Select the IQS323EV02 three-button board
+        inductive               Select the IQS323EV02 inductive-sensing board
+        movement                Select the IQS323A01 part number connected to
+                                a generic self-capacitive keypad
+
+
 Name:   iqs550
 Info:   Enables I2C connected Azoteq IQS550 trackpad/touchscreen controller
         using GPIO 4 (pin 7 on GPIO header) for interrupt.
