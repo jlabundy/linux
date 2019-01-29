@@ -1,0 +1,112 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
+// Definitions for Azoteq IQS626A capacitive touch controller
+/dts-v1/;
+/plugin/;
+#include <dt-bindings/input/input.h>
+#include <dt-bindings/interrupt-controller/irq.h>
+
+/ {
+	compatible = "brcm,bcm2835";
+
+	fragment@0 {
+		target = <&gpio>;
+		__overlay__ {
+			iqs626a_pins: iqs626a_pins {
+				brcm,pins = <4>;
+				brcm,pull = <2>;
+			};
+		};
+	};
+
+	fragment@1 {
+		target = <&i2c1>;
+		__overlay__ {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			status = "okay";
+
+			iqs626a: iqs626a@44 {
+				compatible = "azoteq,iqs626a";
+				reg = <0x44>;
+				interrupt-parent = <&gpio>;
+				interrupts = <4 IRQ_TYPE_LEVEL_LOW>;
+				pinctrl-names = "default";
+				pinctrl-0 = <&iqs626a_pins>;
+				azoteq,rate-np-ms = <16>;
+				azoteq,rate-lp-ms = <160>;
+				azoteq,timeout-pwr-ms = <2560>;
+				azoteq,timeout-lta-ms = <32768>;
+
+				ulp-0 {
+					azoteq,meas-cap-decrease;
+					azoteq,ati-base = <75>;
+					azoteq,ati-target = <1024>;
+					azoteq,rx-enable = <2>, <3>, <4>,
+							   <5>, <6>, <7>;
+
+					event-prox {
+						linux,code = <KEY_POWER>;
+					};
+				};
+
+				trackpad-3x3 {
+					azoteq,filt-str-np-cnt = <1>;
+					azoteq,filt-str-lp-cnt = <1>;
+					azoteq,hyst = <4>;
+					azoteq,thresh = <35>, <40>, <40>,
+							<38>, <33>, <38>,
+							<35>, <35>, <35>;
+					azoteq,ati-mode = <3>;
+					azoteq,ati-base = <195>, <195>, <195>,
+							  <195>, <195>, <195>,
+							  <195>, <195>, <195>;
+					azoteq,ati-target = <512>;
+					azoteq,proj-bias = <1>;
+					azoteq,sense-freq = <2>;
+					azoteq,gesture-swipe;
+					azoteq,timeout-swipe-ms = <800>;
+					azoteq,timeout-tap-ms = <400>;
+					azoteq,thresh-swipe = <40>;
+					linux,keycodes = <KEY_VOLUMEUP>,
+							 <KEY_VOLUMEDOWN>,
+							 <KEY_NEXTSONG>,
+							 <KEY_PREVIOUSSONG>,
+							 <KEY_PLAYPAUSE>,
+							 <KEY_STOPCD>;
+				};
+
+				/*
+				 * Preserve the default register settings for
+				 * the temperature-tracking channel leveraged
+				 * by reset user interface (RUI) 1.
+				 *
+				 * Scalar properties (e.g. ATI mode) are left
+				 * untouched by simply omitting them; boolean
+				 * properties must be specified explicitly as
+				 * needed.
+				 */
+				generic-2 {
+					azoteq,reseed-disable;
+					azoteq,meas-cap-decrease;
+					azoteq,dual-direction;
+					azoteq,comp-disable;
+					azoteq,static-enable;
+				};
+
+				hall {
+					azoteq,reseed-disable;
+					azoteq,meas-cap-decrease;
+
+					event-touch {
+						linux,code = <SW_LID>;
+					};
+				};
+			};
+		};
+	};
+
+	__overrides__ {
+		interrupt = <&iqs626a_pins>,"brcm,pins:0",
+			    <&iqs626a>,"interrupts:0";
+	};
+};

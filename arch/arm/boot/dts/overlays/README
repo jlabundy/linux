@@ -2022,6 +2022,15 @@ Params: card_name               Override the default, "IQAudIODigi", card name.
                                 dai stream name.
 
 
+Name:   iqs269a
+Info:   Enables I2C connected Azoteq IQS269A capacitive touch controller
+        using GPIO 4 (pin 7 on GPIO header) for interrupt.
+Load:   dtoverlay=iqs269a,<param>=<val>
+Params: interrupt               GPIO used for interrupt (default 4)
+        sync                    GPIO used for SYNC/GPIO3 (optional)
+        addr                    I2C address of IQS269A (default 0x44)
+
+
 Name:   iqs550
 Info:   Enables I2C connected Azoteq IQS550 trackpad/touchscreen controller
         using GPIO 4 (pin 7 on GPIO header) for interrupt.
@@ -2033,6 +2042,13 @@ Params: interrupt               GPIO used for interrupt (default 4)
         invx                    Touchscreen inverted x axis
         invy                    Touchscreen inverted y axis
         swapxy                  Touchscreen swapped x y axis
+
+
+Name:   iqs626a
+Info:   Enables I2C connected Azoteq IQS626A capacitive touch controller
+        using GPIO 4 (pin 7 on GPIO header) for interrupt.
+Load:   dtoverlay=iqs626a,<param>=<val>
+Params: interrupt               GPIO used for interrupt (default 4)
 
 
 Name:   irs1125
