@@ -1,0 +1,81 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
+// Definitions for Azoteq IQS7210A trackpad/touchscreen controller
+/dts-v1/;
+/plugin/;
+#include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/input/input.h>
+
+/ {
+	compatible = "brcm,bcm2835";
+
+	fragment@0 {
+		target = <&i2c1>;
+		__overlay__ {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			status = "okay";
+
+			iqs7210a: iqs7210a@56 {
+				compatible = "azoteq,iqs7210a";
+				reg = <0x56>;
+				irq-gpios = <&gpio 4 GPIO_ACTIVE_LOW>;
+				pinctrl-names = "default";
+				pinctrl-0 = <&iqs7210a_pins>;
+				touchscreen-size-x = <800>;
+				touchscreen-size-y = <480>;
+				azoteq,forced-comms;
+				azoteq,forced-comms-default = <0>;
+				azoteq,num-contacts = <2>;
+
+				trackpad {
+					azoteq,rx-enable = <6>, <5>, <4>, <3>, <2>;
+					azoteq,tx-enable = <1>, <7>, <8>, <9>, <10>;
+				};
+
+				button {
+					azoteq,sense-mode = <2>;
+					azoteq,touch-enter = <40>;
+					azoteq,touch-exit = <36>;
+
+					event-touch {
+						linux,code = <KEY_HOME>;
+					};
+				};
+
+				alp {
+					azoteq,sense-mode = <1>;
+					linux,code = <KEY_POWER>;
+				};
+			};
+		};
+	};
+
+	fragment@1 {
+		target = <&iqs7210a>;
+		iqs7210a_reset: __dormant__ {
+			reset-gpios = <&gpio 255 (GPIO_ACTIVE_LOW |
+						  GPIO_PUSH_PULL)>;
+		};
+	};
+
+	fragment@2 {
+		target = <&gpio>;
+		__overlay__ {
+			iqs7210a_pins: iqs7210a_pins {
+				brcm,pins = <4>;
+				brcm,pull = <2>;
+			};
+		};
+	};
+
+	__overrides__ {
+		interrupt = <&iqs7210a>,"irq-gpios:4",
+			    <&iqs7210a_pins>,"brcm,pins:0";
+		reset = <0>,"+1", <&iqs7210a_reset>,"reset-gpios:4";
+		sizex = <&iqs7210a>,"touchscreen-size-x:0";
+		sizey = <&iqs7210a>,"touchscreen-size-y:0";
+		invx = <&iqs7210a>,"touchscreen-inverted-x?";
+		invy = <&iqs7210a>,"touchscreen-inverted-y?";
+		swapxy = <&iqs7210a>,"touchscreen-swapped-x-y?";
+	};
+};

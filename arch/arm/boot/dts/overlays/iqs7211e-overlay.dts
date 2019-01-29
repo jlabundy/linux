@@ -1,0 +1,99 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
+// Definitions for Azoteq IQS7211E trackpad/touchscreen controller
+/dts-v1/;
+/plugin/;
+#include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/input/input.h>
+
+/ {
+	compatible = "brcm,bcm2835";
+
+	fragment@0 {
+		target = <&i2c1>;
+		__overlay__ {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			status = "okay";
+
+			iqs7211e: iqs7211e@56 {
+				compatible = "azoteq,iqs7211e";
+				reg = <0x56>;
+				irq-gpios = <&gpio 4 (GPIO_ACTIVE_LOW |
+						      GPIO_OPEN_DRAIN)>;
+				pinctrl-names = "default";
+				pinctrl-0 = <&iqs7211e_pins>;
+				azoteq,forced-comms;
+				azoteq,forced-comms-default = <0>;
+
+				trackpad {
+					event-tap {
+						linux,code = <KEY_PLAYPAUSE>;
+					};
+
+					event-tap-double {
+						linux,code = <KEY_SHUFFLE>;
+					};
+
+					event-tap-triple {
+						linux,code = <KEY_AGAIN>;
+					};
+
+					event-hold {
+						linux,code = <KEY_STOP>;
+					};
+
+					event-palm {
+						linux,code = <KEY_EXIT>;
+					};
+
+					event-swipe-x-pos {
+						linux,code = <KEY_REWIND>;
+					};
+
+					event-swipe-x-pos-hold {
+						linux,code = <KEY_PREVIOUS>;
+					};
+
+					event-swipe-x-neg {
+						linux,code = <KEY_FASTFORWARD>;
+					};
+
+					event-swipe-x-neg-hold {
+						linux,code = <KEY_NEXT>;
+					};
+
+					event-swipe-y-pos {
+						linux,code = <KEY_VOLUMEUP>;
+					};
+
+					event-swipe-y-pos-hold {
+						linux,code = <KEY_MUTE>;
+					};
+
+					event-swipe-y-neg {
+						linux,code = <KEY_VOLUMEDOWN>;
+					};
+
+					event-swipe-y-neg-hold {
+						linux,code = <KEY_MUTE>;
+					};
+				};
+			};
+		};
+	};
+
+	fragment@1 {
+		target = <&gpio>;
+		__overlay__ {
+			iqs7211e_pins: iqs7211e_pins {
+				brcm,pins = <4>;
+				brcm,pull = <2>;
+			};
+		};
+	};
+
+	__overrides__ {
+		interrupt = <&iqs7211e>,"irq-gpios:4",
+			    <&iqs7211e_pins>,"brcm,pins:0";
+	};
+};
