@@ -2963,6 +2963,42 @@ Params: interrupt               GPIO used for interrupt (default 4)
         swapxy                  Touchscreen swapped x y axis
 
 
+Name:   iqs7210a
+Info:   Enables I2C connected Azoteq IQS7210A trackpad/touchscreen controller
+        using GPIO 4 (pin 7 on GPIO header) for interrupt.
+Load:   dtoverlay=iqs7210a,<param>=<val>
+Params: interrupt               GPIO used for interrupt (default 4)
+        reset                   GPIO used for reset (optional)
+        sizex                   Touchscreen size x (default 800)
+        sizey                   Touchscreen size y (default 480)
+        invx                    Touchscreen inverted x axis
+        invy                    Touchscreen inverted y axis
+        swapxy                  Touchscreen swapped x y axis
+
+
+Name:   iqs7211a
+Info:   Enables I2C connected Azoteq IQS7211A trackpad/touchscreen controller
+        using GPIO 4 (pin 7 on GPIO header) for interrupt.
+Load:   dtoverlay=iqs7211a,<param>=<val>
+Params: interrupt               GPIO used for interrupt (default 4)
+        reset                   GPIO used for reset (optional)
+        sizex                   Touchscreen size x (default 800)
+        sizey                   Touchscreen size y (default 480)
+        invx                    Touchscreen inverted x axis
+        invy                    Touchscreen inverted y axis
+        swapxy                  Touchscreen swapped x y axis
+        rectangle               Select the IQS7211AEV02A rectangle trackpad
+        flower                  Select the IQS7211AEV02A flower trackpad
+        click                   Select the Mikroe click board
+
+
+Name:   iqs7211e
+Info:   Enables I2C connected Azoteq IQS7211E trackpad/touchscreen controller
+        using GPIO 4 (pin 7 on GPIO header) for shared interrupt and reset.
+Load:   dtoverlay=iqs7211e,<param>=<val>
+Params: interrupt               GPIO used for interrupt/reset (default 4)
+
+
 Name:   irs1125
 Info:   Infineon irs1125 TOF camera module.
         Uses Unicam 1, which is the standard camera connector on most Pi

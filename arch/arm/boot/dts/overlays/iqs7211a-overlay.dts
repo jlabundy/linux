@@ -1,0 +1,203 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
+// Definitions for Azoteq IQS7211A trackpad/touchscreen controller
+/dts-v1/;
+/plugin/;
+#include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/input/input.h>
+
+/ {
+	compatible = "brcm,bcm2835";
+
+	fragment@0 {
+		target = <&i2c1>;
+		__overlay__ {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			status = "okay";
+
+			iqs7211a: iqs7211a@56 {
+				compatible = "azoteq,iqs7211a";
+				reg = <0x56>;
+				irq-gpios = <&gpio 4 GPIO_ACTIVE_LOW>;
+				pinctrl-names = "default";
+				pinctrl-0 = <&iqs7211a_pins>;
+				azoteq,forced-comms;
+				azoteq,forced-comms-default = <1>;
+			};
+		};
+	};
+
+	fragment@1 {
+		target = <&iqs7211a>;
+		iqs7211a_reset: __dormant__ {
+			reset-gpios = <&gpio 255 (GPIO_ACTIVE_LOW |
+						  GPIO_PUSH_PULL)>;
+		};
+	};
+
+	fragment@2 {
+		target = <&gpio>;
+		__overlay__ {
+			iqs7211a_pins: iqs7211a_pins {
+				brcm,pins = <4>;
+				brcm,pull = <2>;
+			};
+		};
+	};
+
+	fragment@3 {
+		target = <&iqs7211a>;
+		__dormant__ {
+			touchscreen-size-x = <800>;
+			touchscreen-size-y = <480>;
+			azoteq,num-contacts = <2>;
+			azoteq,contact-split = <0>;
+
+			trackpad {
+				azoteq,rx-enable = <7>, <6>, <5>, <4>,
+						   <3>, <2>, <1>, <0>;
+				azoteq,tx-enable = <11>, <10>, <9>, <8>;
+				azoteq,ati-frac-div-fine = <3>;
+				azoteq,ati-frac-mult-coarse = <15>;
+				azoteq,ati-frac-div-coarse = <4>;
+				azoteq,ati-comp-div = <5>;
+				azoteq,ati-target = <250>;
+				azoteq,conv-period = <3>;
+				azoteq,conv-frac = <127>;
+			};
+
+			alp {
+				azoteq,conv-period = <3>;
+				azoteq,conv-frac = <127>;
+			};
+		};
+	};
+
+	fragment@4 {
+		target = <&iqs7211a>;
+		__dormant__ {
+			trackpad {
+				azoteq,rx-enable = <0>, <3>, <5>;
+				azoteq,tx-enable = <11>, <10>, <9>;
+				azoteq,ati-frac-div-fine = <6>;
+				azoteq,ati-frac-mult-coarse = <4>;
+				azoteq,ati-frac-div-coarse = <1>;
+				azoteq,ati-comp-div = <6>;
+				azoteq,ati-target = <450>;
+				azoteq,touch-enter = <13>;
+				azoteq,touch-exit = <20>;
+
+				event-tap {
+					azoteq,gesture-max-ms = <150>;
+					azoteq,gesture-dist = <100>;
+					linux,code = <KEY_PLAYPAUSE>;
+				};
+
+				event-hold {
+					azoteq,gesture-min-ms = <850>;
+					linux,code = <KEY_STOPCD>;
+				};
+
+				event-swipe-x-pos {
+					azoteq,gesture-max-ms = <250>;
+					azoteq,gesture-dist = <200>;
+					azoteq,gesture-angle = <64>;
+					linux,code = <KEY_PREVIOUSSONG>;
+				};
+
+				event-swipe-x-neg {
+					linux,code = <KEY_NEXTSONG>;
+				};
+
+				event-swipe-y-pos {
+					azoteq,gesture-dist = <255>;
+					linux,code = <KEY_VOLUMEUP>;
+				};
+
+				event-swipe-y-neg {
+					linux,code = <KEY_VOLUMEDOWN>;
+				};
+			};
+
+			alp {
+				azoteq,rx-enable = <0>, <5>;
+				azoteq,tx-enable = <11>, <9>;
+				azoteq,ati-frac-div-fine = <1>;
+				azoteq,ati-frac-mult-coarse = <1>;
+				azoteq,ati-frac-div-coarse = <1>;
+				azoteq,ati-comp-div = <2>;
+				azoteq,ati-target = <200>;
+				azoteq,thresh = <30>;
+				linux,code = <KEY_POWER>;
+			};
+		};
+	};
+
+	fragment@5 {
+		target = <&iqs7211a>;
+		__dormant__ {
+			trackpad {
+				azoteq,rx-enable = <3>, <2>, <1>, <0>;
+				azoteq,tx-enable = <10>, <9>, <8>, <7>, <6>;
+				azoteq,channel-select = <0>, <255>,
+							<1>, <255>,
+							<2>, <255>,
+							<3>, <255>,
+							<4>, <255>,
+							<5>, <255>,
+							<6>, <255>,
+							<7>, <255>,
+							<8>, <255>,
+							<9>, <255>,
+							<10>, <255>,
+							<11>, <255>,
+							<12>, <255>,
+							<13>, <255>,
+							<14>, <255>,
+							<15>, <255>,
+							/* Skip channel 16 */
+							<17>, <255>,
+							<18>, <255>;
+							/* Skip channel 19 */
+
+				event-tap {
+					linux,code = <KEY_PLAYPAUSE>;
+				};
+
+				event-hold {
+					linux,code = <KEY_STOPCD>;
+				};
+
+				event-swipe-x-pos {
+					linux,code = <KEY_NEXTSONG>;
+				};
+
+				event-swipe-x-neg {
+					linux,code = <KEY_PREVIOUSSONG>;
+				};
+
+				event-swipe-y-pos {
+					linux,code = <KEY_VOLUMEUP>;
+				};
+
+				event-swipe-y-neg {
+					linux,code = <KEY_VOLUMEDOWN>;
+				};
+			};
+		};
+	};
+
+	__overrides__ {
+		interrupt = <&iqs7211a>,"irq-gpios:4",
+			    <&iqs7211a_pins>,"brcm,pins:0";
+		reset = <0>,"+1", <&iqs7211a_reset>,"reset-gpios:4";
+		sizex = <&iqs7211a>,"touchscreen-size-x:0";
+		sizey = <&iqs7211a>,"touchscreen-size-y:0";
+		invx = <&iqs7211a>,"touchscreen-inverted-x?";
+		invy = <&iqs7211a>,"touchscreen-inverted-y?";
+		swapxy = <&iqs7211a>,"touchscreen-swapped-x-y?";
+		rectangle = <0>,"+3";
+		flower = <0>,"+4";
+		click = <0>,"+5";
+	};
+};
