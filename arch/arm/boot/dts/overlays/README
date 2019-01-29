@@ -2963,6 +2963,42 @@ Params: interrupt               GPIO used for interrupt (default 4)
         swapxy                  Touchscreen swapped x y axis
 
 
+Name:   iqs7222a
+Info:   Enables I2C connected Azoteq IQS7222A capacitive touch controller
+        using GPIO 4 (pin 7 on GPIO header) for interrupt.
+Load:   dtoverlay=iqs7222a,<param>=<val>
+Params: interrupt               GPIO used for interrupt (default 4)
+        reset                   GPIO used for reset (optional)
+        addr                    I2C address of IQS7222A (default 0x44)
+
+
+Name:   iqs7222b
+Info:   Enables I2C connected Azoteq IQS7222B capacitive touch controller
+        using GPIO 4 (pin 7 on GPIO header) for interrupt.
+Load:   dtoverlay=iqs7222b,<param>=<val>
+Params: interrupt               GPIO used for interrupt (default 4)
+        reset                   GPIO used for reset (optional)
+        addr                    I2C address of IQS7222B (default 0x56)
+
+
+Name:   iqs7222c
+Info:   Enables I2C connected Azoteq IQS7222C capacitive touch controller
+        using GPIO 4 (pin 7 on GPIO header) for interrupt.
+Load:   dtoverlay=iqs7222c,<param>=<val>
+Params: interrupt               GPIO used for interrupt (default 4)
+        reset                   GPIO used for reset (optional)
+        addr                    I2C address of IQS7222C (default 0x44)
+
+
+Name:   iqs7222d
+Info:   Enables I2C connected Azoteq IQS7222D capacitive touch controller
+        using GPIO 4 (pin 7 on GPIO header) for interrupt.
+Load:   dtoverlay=iqs7222d,<param>=<val>
+Params: interrupt               GPIO used for interrupt (default 4)
+        reset                   GPIO used for reset (optional)
+        addr                    I2C address of IQS7222D (default 0x44)
+
+
 Name:   irs1125
 Info:   Infineon irs1125 TOF camera module.
         Uses Unicam 1, which is the standard camera connector on most Pi

@@ -1,0 +1,276 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
+// Definitions for Azoteq AZU051A03 + IQS7222B capacitive touch controller
+/dts-v1/;
+/plugin/;
+#include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/input/input.h>
+
+/ {
+	compatible = "brcm,bcm2835";
+
+	fragment@0 {
+		target = <&i2c1>;
+		__overlay__ {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			status = "okay";
+
+			iqs7222b: iqs7222b@56 {
+				compatible = "azoteq,iqs7222b";
+				reg = <0x56>;
+				irq-gpios = <&gpio 4 GPIO_ACTIVE_LOW>;
+				pinctrl-names = "default";
+				pinctrl-0 = <&iqs7222b_pins>;
+
+				cycle-0 {
+					azoteq,conv-period = <5>;
+					azoteq,conv-frac = <127>;
+					azoteq,tx-enable = <6>, <7>, <8>;
+					azoteq,dead-time-enable;
+					azoteq,sense-mode = <2>;
+				};
+
+				cycle-1 {
+					azoteq,conv-period = <5>;
+					azoteq,conv-frac = <127>;
+					azoteq,tx-enable = <8>;
+					azoteq,dead-time-enable;
+					azoteq,sense-mode = <2>;
+				};
+
+				cycle-2 {
+					azoteq,conv-period = <5>;
+					azoteq,conv-frac = <127>;
+					azoteq,tx-enable = <7>;
+					azoteq,dead-time-enable;
+					azoteq,sense-mode = <2>;
+				};
+
+				cycle-3 {
+					azoteq,conv-period = <5>;
+					azoteq,conv-frac = <127>;
+					azoteq,tx-enable = <6>;
+					azoteq,dead-time-enable;
+					azoteq,sense-mode = <2>;
+				};
+
+				cycle-4 {
+					azoteq,conv-period = <5>;
+					azoteq,conv-frac = <127>;
+					azoteq,tx-enable = <8>;
+					azoteq,dead-time-enable;
+					azoteq,sense-mode = <2>;
+				};
+
+				cycle-5 {
+					azoteq,conv-period = <5>;
+					azoteq,conv-frac = <127>;
+					azoteq,tx-enable = <7>;
+					azoteq,dead-time-enable;
+					azoteq,sense-mode = <2>;
+				};
+
+				cycle-6 {
+					azoteq,conv-period = <5>;
+					azoteq,conv-frac = <127>;
+					azoteq,tx-enable = <6>;
+					azoteq,dead-time-enable;
+					azoteq,sense-mode = <2>;
+				};
+
+				channel-0 {
+					azoteq,global-halt;
+					azoteq,invert-enable;
+					azoteq,rx-enable = <2>, <3>;
+				};
+
+				channel-1 {
+					azoteq,global-halt;
+					azoteq,invert-enable;
+					azoteq,rx-enable = <2>;
+					azoteq,ati-target = <496>;
+					azoteq,ati-base = <192>;
+					azoteq,ati-mode = <5>;
+
+					event-touch {
+						linux,code = <KEY_NUMERIC_1>;
+					};
+				};
+
+				channel-2 {
+					azoteq,global-halt;
+					azoteq,invert-enable;
+					azoteq,rx-enable = <2>;
+					azoteq,ati-target = <496>;
+					azoteq,ati-base = <192>;
+					azoteq,ati-mode = <5>;
+
+					event-touch {
+						linux,code = <KEY_NUMERIC_2>;
+					};
+				};
+
+				channel-3 {
+					azoteq,global-halt;
+					azoteq,invert-enable;
+					azoteq,rx-enable = <2>;
+					azoteq,ati-target = <496>;
+					azoteq,ati-base = <192>;
+					azoteq,ati-mode = <5>;
+
+					event-touch {
+						linux,code = <KEY_NUMERIC_3>;
+					};
+				};
+
+				channel-4 {
+					azoteq,global-halt;
+					azoteq,invert-enable;
+					azoteq,rx-enable = <3>;
+					azoteq,ati-target = <496>;
+					azoteq,ati-base = <192>;
+					azoteq,ati-mode = <5>;
+
+					event-touch {
+						linux,code = <KEY_NUMERIC_4>;
+					};
+				};
+
+				channel-5 {
+					azoteq,global-halt;
+					azoteq,invert-enable;
+					azoteq,rx-enable = <3>;
+					azoteq,ati-target = <496>;
+					azoteq,ati-base = <192>;
+					azoteq,ati-mode = <5>;
+
+					event-touch {
+						linux,code = <KEY_NUMERIC_5>;
+					};
+				};
+
+				channel-6 {
+					azoteq,global-halt;
+					azoteq,invert-enable;
+					azoteq,rx-enable = <3>;
+					azoteq,ati-target = <496>;
+					azoteq,ati-base = <192>;
+					azoteq,ati-mode = <5>;
+
+					event-touch {
+						linux,code = <KEY_NUMERIC_6>;
+					};
+				};
+
+				channel-10 {
+					azoteq,global-halt;
+					azoteq,invert-enable;
+					azoteq,rx-enable = <4>, <5>;
+				};
+
+				channel-11 {
+					azoteq,global-halt;
+					azoteq,invert-enable;
+					azoteq,rx-enable = <4>;
+					azoteq,ati-target = <496>;
+					azoteq,ati-base = <192>;
+					azoteq,ati-mode = <5>;
+
+					event-touch {
+						linux,code = <KEY_NUMERIC_7>;
+					};
+				};
+
+				channel-12 {
+					azoteq,global-halt;
+					azoteq,invert-enable;
+					azoteq,rx-enable = <4>;
+					azoteq,ati-target = <496>;
+					azoteq,ati-base = <192>;
+					azoteq,ati-mode = <5>;
+
+					event-touch {
+						linux,code = <KEY_NUMERIC_8>;
+					};
+				};
+
+				channel-13 {
+					azoteq,global-halt;
+					azoteq,invert-enable;
+					azoteq,rx-enable = <4>;
+					azoteq,ati-target = <496>;
+					azoteq,ati-base = <192>;
+					azoteq,ati-mode = <5>;
+
+					event-touch {
+						linux,code = <KEY_NUMERIC_9>;
+					};
+				};
+
+				channel-14 {
+					azoteq,global-halt;
+					azoteq,invert-enable;
+					azoteq,rx-enable = <5>;
+					azoteq,ati-target = <496>;
+					azoteq,ati-base = <192>;
+					azoteq,ati-mode = <5>;
+
+					event-touch {
+						linux,code = <KEY_NUMERIC_STAR>;
+					};
+				};
+
+				channel-15 {
+					azoteq,global-halt;
+					azoteq,invert-enable;
+					azoteq,rx-enable = <5>;
+					azoteq,ati-target = <496>;
+					azoteq,ati-base = <192>;
+					azoteq,ati-mode = <5>;
+
+					event-touch {
+						linux,code = <KEY_NUMERIC_0>;
+					};
+				};
+
+				channel-16 {
+					azoteq,global-halt;
+					azoteq,invert-enable;
+					azoteq,rx-enable = <5>;
+					azoteq,ati-target = <496>;
+					azoteq,ati-base = <192>;
+					azoteq,ati-mode = <5>;
+
+					event-touch {
+						linux,code = <KEY_NUMERIC_POUND>;
+					};
+				};
+			};
+		};
+	};
+
+	fragment@1 {
+		target = <&iqs7222b>;
+		iqs7222b_reset: __dormant__ {
+			reset-gpios = <&gpio 255 (GPIO_ACTIVE_LOW |
+						  GPIO_PUSH_PULL)>;
+		};
+	};
+
+	fragment@2 {
+		target = <&gpio>;
+		__overlay__ {
+			iqs7222b_pins: iqs7222b_pins {
+				brcm,pins = <4>;
+				brcm,pull = <2>;
+			};
+		};
+	};
+
+	__overrides__ {
+		interrupt = <&iqs7222b>,"irq-gpios:4",
+			    <&iqs7222b_pins>,"brcm,pins:0";
+		reset = <0>,"+1", <&iqs7222b_reset>,"reset-gpios:4";
+		addr = <&iqs7222b>,"reg:0";
+	};
+};
