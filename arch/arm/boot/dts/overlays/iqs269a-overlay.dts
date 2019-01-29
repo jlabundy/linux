@@ -1,0 +1,143 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
+// Definitions for Azoteq IQS269A capacitive touch controller
+/dts-v1/;
+/plugin/;
+#include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/input/input.h>
+#include <dt-bindings/interrupt-controller/irq.h>
+
+/ {
+	compatible = "brcm,bcm2835";
+
+	fragment@0 {
+		target = <&gpio>;
+		__overlay__ {
+			iqs269a_pins: iqs269a_pins {
+				brcm,pins = <4>;
+				brcm,pull = <2>;
+			};
+		};
+	};
+
+	fragment@1 {
+		target = <&iqs269a_pins>;
+		iqs269a_pins_1: __overlay__ {
+			brcm,pins = <4>;
+			brcm,pull = <2>;
+		};
+	};
+
+	fragment@2 {
+		target = <&iqs269a_pins>;
+		iqs269a_pins_2: __dormant__ {
+			brcm,pins = <4 255>;
+			brcm,pull = <2>;
+		};
+	};
+
+	fragment@3 {
+		target = <&i2c1>;
+		__overlay__ {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			status = "okay";
+
+			iqs269a: iqs269a@44 {
+				compatible = "azoteq,iqs269a";
+				reg = <0x44>;
+				interrupt-parent = <&gpio>;
+				interrupts = <4 IRQ_TYPE_LEVEL_LOW>;
+				pinctrl-names = "default";
+				pinctrl-0 = <&iqs269a_pins>;
+				azoteq,hall-enable;
+				azoteq,timeout-tap-ms = <400>;
+				azoteq,timeout-swipe-ms = <800>;
+				linux,keycodes = <KEY_PLAYPAUSE>,
+						 <KEY_STOPCD>,
+						 <KEY_NEXTSONG>,
+						 <KEY_PREVIOUSSONG>;
+
+				channel@0 {
+					reg = <0x0>;
+
+					event-prox {
+						linux,code = <KEY_POWER>;
+					};
+				};
+
+				channel@1 {
+					reg = <0x1>;
+					azoteq,slider0-select;
+				};
+
+				channel@2 {
+					reg = <0x2>;
+					azoteq,slider0-select;
+				};
+
+				channel@3 {
+					reg = <0x3>;
+					azoteq,slider0-select;
+				};
+
+				channel@4 {
+					reg = <0x4>;
+					azoteq,slider0-select;
+				};
+
+				channel@5 {
+					reg = <0x5>;
+					azoteq,slider0-select;
+				};
+
+				channel@6 {
+					reg = <0x6>;
+					azoteq,invert-enable;
+					azoteq,static-enable;
+					azoteq,reseed-disable;
+					azoteq,rx-enable = <0>;
+					azoteq,sense-freq = <0x0>;
+					azoteq,sense-mode = <0xE>;
+					azoteq,ati-mode = <0x0>;
+					azoteq,ati-base = <200>;
+					azoteq,ati-target = <320>;
+				};
+
+				channel@7 {
+					reg = <0x7>;
+					azoteq,invert-enable;
+					azoteq,static-enable;
+					azoteq,reseed-disable;
+					azoteq,rx-enable = <0>, <6>;
+					azoteq,sense-freq = <0x0>;
+					azoteq,sense-mode = <0xE>;
+					azoteq,ati-mode = <0x3>;
+					azoteq,ati-base = <200>;
+					azoteq,ati-target = <320>;
+
+					event-touch {
+						linux,code = <SW_LID>;
+					};
+				};
+			};
+		};
+	};
+
+	fragment@4 {
+		target = <&iqs269a>;
+
+		iqs269a_sync: __dormant__ {
+			azoteq,gpio3-select = <8>;
+			sync-gpios = <&gpio 255 (GPIO_ACTIVE_LOW |
+						 GPIO_OPEN_DRAIN)>;
+		};
+	};
+
+	__overrides__ {
+		interrupt = <&iqs269a_pins>,"brcm,pins:0",
+			    <&iqs269a>,"interrupts:0";
+		sync = <0>,"-1+2+4", <&iqs269a_sync>,"sync-gpios:4",
+				     <&iqs269a_pins_2>,"brcm,pins:4";
+		addr = <&iqs269a>,"reg:0";
+	};
+};
