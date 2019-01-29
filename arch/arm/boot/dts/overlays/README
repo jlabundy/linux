@@ -2710,6 +2710,24 @@ Params: interrupt               GPIO used for interrupt (default 4)
         swapxy                  Touchscreen swapped x y axis
 
 
+Name:   iqs620a
+Info:   Enables I2C connected Azoteq IQS620A multi-function sensor
+        using GPIO 4 (pin 7 on GPIO header) for interrupt.
+Load:   dtoverlay=iqs620a,<param>=<val>
+Params: interrupt               GPIO used for interrupt (default 4)
+        config                  Name of optional configuration file stored
+                                in /lib/firmware (default iqs620a.bin)
+
+
+Name:   iqs624
+Info:   Enables I2C connected Azoteq IQS624 multi-function sensor
+        using GPIO 4 (pin 7 on GPIO header) for interrupt.
+Load:   dtoverlay=iqs624,<param>=<val>
+Params: interrupt               GPIO used for interrupt (default 4)
+        config                  Name of optional configuration file stored
+                                in /lib/firmware (default iqs624.bin)
+
+
 Name:   irs1125
 Info:   Infineon irs1125 TOF camera module.
         Uses Unicam 1, which is the standard camera connector on most Pi
