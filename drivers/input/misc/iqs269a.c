@@ -14,8 +14,10 @@
 #include <linux/delay.h>
 #include <linux/device.h>
 #include <linux/err.h>
+#include <linux/gpio/consumer.h>
 #include <linux/i2c.h>
 #include <linux/input.h>
+#include <linux/input/iqs269a.h>
 #include <linux/interrupt.h>
 #include <linux/kernel.h>
 #include <linux/module.h>
@@ -100,6 +102,8 @@
 #define IQS269_MISC_B_RESEED_UI_SEL_SHIFT	6
 #define IQS269_MISC_B_RESEED_UI_SEL_MAX		3
 #define IQS269_MISC_B_TRACKING_UI_ENABLE	BIT(4)
+#define IQS269_MISC_B_SYNC_UI_ZCROSS		BIT(3)
+#define IQS269_MISC_B_SYNC_UI_ENABLE		BIT(2)
 #define IQS269_MISC_B_FILT_STR_SLIDER		GENMASK(1, 0)
 
 #define IQS269_TOUCH_HOLD_SLIDER_SEL		0x89
@@ -164,6 +168,19 @@
 #define IQS269_NUM_SL				2
 
 #define iqs269_irq_wait()			usleep_range(200, 250)
+
+enum iqs269_gpio3_select {
+	IQS269_GPIO3_TOUCH_CH0,
+	IQS269_GPIO3_TOUCH_CH1,
+	IQS269_GPIO3_TOUCH_CH2,
+	IQS269_GPIO3_TOUCH_CH3,
+	IQS269_GPIO3_TOUCH_CH4,
+	IQS269_GPIO3_TOUCH_CH5,
+	IQS269_GPIO3_TOUCH_CH6,
+	IQS269_GPIO3_TOUCH_CH7,
+	IQS269_GPIO3_SYNC_HL,
+	IQS269_GPIO3_SYNC_ZC,
+};
 
 enum iqs269_local_cap_size {
 	IQS269_LOCAL_CAP_SIZE_0,
@@ -314,11 +331,13 @@ struct iqs269_private {
 	struct iqs269_ver_info ver_info;
 	struct iqs269_sys_reg sys_reg;
 	struct completion ati_done;
+	struct gpio_desc *sync_gpio;
 	struct input_dev *keypad;
 	struct input_dev *slider[IQS269_NUM_SL];
 	unsigned int kp_type[IQS269_NUM_CH][ARRAY_SIZE(iqs269_events)];
 	unsigned int kp_code[IQS269_NUM_CH][ARRAY_SIZE(iqs269_events)];
 	unsigned int sl_code[IQS269_NUM_SL][IQS269_NUM_GESTURES];
+	unsigned int sync_stops;
 	unsigned int otp_option;
 	unsigned int ch_num;
 	bool hall_enable;
@@ -916,16 +935,38 @@ static int iqs269_parse_prop(struct iqs269_private *iqs269)
 	if (device_property_present(&client->dev, "azoteq,filt-disable"))
 		misc_a |= IQS269_MISC_A_FILT_DISABLE;
 
+	misc_b &= ~IQS269_MISC_B_SYNC_UI_ZCROSS;
+	misc_b &= ~IQS269_MISC_B_SYNC_UI_ENABLE;
 	if (!device_property_read_u32(&client->dev, "azoteq,gpio3-select",
 				      &val)) {
-		if (val >= IQS269_NUM_CH) {
+		switch (val) {
+		case IQS269_GPIO3_TOUCH_CH0 ... IQS269_GPIO3_TOUCH_CH7:
+			misc_a &= ~IQS269_MISC_A_GPIO3_SELECT_MASK;
+			misc_a |= (val << IQS269_MISC_A_GPIO3_SELECT_SHIFT);
+			break;
+
+		case IQS269_GPIO3_SYNC_ZC:
+			misc_b |= IQS269_MISC_B_SYNC_UI_ZCROSS;
+			fallthrough;
+
+		case IQS269_GPIO3_SYNC_HL:
+			iqs269->sync_gpio = devm_gpiod_get(&client->dev, "sync",
+							   GPIOD_OUT_HIGH);
+			if (IS_ERR(iqs269->sync_gpio)) {
+				error = PTR_ERR(iqs269->sync_gpio);
+				dev_err(&client->dev,
+					"Failed to request GPIO: %d\n", error);
+				return error;
+			}
+
+			misc_b |= IQS269_MISC_B_SYNC_UI_ENABLE;
+			break;
+
+		default:
 			dev_err(&client->dev, "Invalid GPIO3 selection: %u\n",
 				val);
 			return -EINVAL;
 		}
-
-		misc_a &= ~IQS269_MISC_A_GPIO3_SELECT_MASK;
-		misc_a |= (val << IQS269_MISC_A_GPIO3_SELECT_SHIFT);
 	}
 
 	misc_a &= ~IQS269_MISC_A_DUAL_DIR;
@@ -1721,6 +1762,32 @@ static ssize_t ati_trigger_store(struct device *dev,
 	return count;
 }
 
+static ssize_t sync_test_show(struct device *dev,
+			      struct device_attribute *attr, char *buf)
+{
+	struct iqs269_private *iqs269 = dev_get_drvdata(dev);
+
+	return scnprintf(buf, PAGE_SIZE, "%u\n", iqs269->sync_stops);
+}
+
+static ssize_t sync_test_store(struct device *dev,
+			       struct device_attribute *attr, const char *buf,
+			       size_t count)
+{
+	unsigned int val;
+	int error;
+
+	error = kstrtouint(buf, 10, &val);
+	if (error)
+		return error;
+
+	error = iqs269_sync(val);
+	if (error)
+		return error;
+
+	return count;
+}
+
 static DEVICE_ATTR_RO(counts);
 static DEVICE_ATTR_RO(hall_bin);
 static DEVICE_ATTR_RW(hall_enable);
@@ -1730,6 +1797,7 @@ static DEVICE_ATTR_RW(ati_mode);
 static DEVICE_ATTR_RW(ati_base);
 static DEVICE_ATTR_RW(ati_target);
 static DEVICE_ATTR_RW(ati_trigger);
+static DEVICE_ATTR_RW(sync_test);
 
 static struct attribute *iqs269_attrs[] = {
 	&dev_attr_counts.attr,
@@ -1741,6 +1809,7 @@ static struct attribute *iqs269_attrs[] = {
 	&dev_attr_ati_base.attr,
 	&dev_attr_ati_target.attr,
 	&dev_attr_ati_trigger.attr,
+	&dev_attr_sync_test.attr,
 	NULL,
 };
 
@@ -1910,6 +1979,113 @@ static const struct of_device_id iqs269_of_match[] = {
 	{ }
 };
 MODULE_DEVICE_TABLE(of, iqs269_of_match);
+
+int iqs269_sync(enum iqs269_sync_action action)
+{
+	struct iqs269_private *iqs269;
+	struct i2c_client *client;
+	struct device_node *np;
+	int ret, i;
+	u16 misc_b;
+
+	np = of_find_matching_node_and_match(NULL, iqs269_of_match, NULL);
+	if (!np)
+		return -ENODEV;
+
+	client = of_find_i2c_device_by_node(np);
+	if (!client) {
+		ret = -ENODEV;
+		goto err_put_node;
+	}
+
+	iqs269 = i2c_get_clientdata(client);
+	if (!iqs269) {
+		ret = -ENODEV;
+		goto err_put_dev;
+	}
+
+	misc_b = be16_to_cpu(iqs269->sys_reg.misc_b);
+	if (!(misc_b & IQS269_MISC_B_SYNC_UI_ENABLE)) {
+		ret = -EPERM;
+		goto err_put_dev;
+	}
+
+	mutex_lock(&iqs269->lock);
+
+	switch (action) {
+	case IQS269_SYNC_STOP:
+		if (misc_b & IQS269_MISC_B_SYNC_UI_ZCROSS) {
+			ret = -EPERM;
+			break;
+		}
+
+		if (iqs269->sync_stops++) {
+			ret = 0;
+			break;
+		}
+
+		gpiod_set_value_cansleep(iqs269->sync_gpio, 0);
+		for (i = 0; i < IQS269_NUM_CH; i++) {
+			/*
+			 * If configured to do so, the device asserts its GPIO3
+			 * pin while any host-initiated conversions are pending.
+			 */
+			ret = gpiod_get_value_cansleep(iqs269->sync_gpio);
+			if (ret <= 0)
+				break;
+
+			usleep_range(1500, 1600);
+		}
+
+		if (ret > 0)
+			ret = -ETIMEDOUT;
+		break;
+
+	case IQS269_SYNC_RESTART:
+		if (misc_b & IQS269_MISC_B_SYNC_UI_ZCROSS) {
+			ret = -EPERM;
+			break;
+		}
+
+		ret = 0;
+		if (!iqs269->sync_stops || --iqs269->sync_stops)
+			break;
+
+		gpiod_set_value_cansleep(iqs269->sync_gpio, 1);
+		iqs269_irq_wait();
+		break;
+
+	case IQS269_SYNC_TRIGGER:
+		if (!(misc_b & IQS269_MISC_B_SYNC_UI_ZCROSS)) {
+			ret = -EPERM;
+			break;
+		}
+
+		ret = gpiod_get_value_cansleep(iqs269->sync_gpio);
+		if (ret < 0)
+			break;
+
+		gpiod_set_value_cansleep(iqs269->sync_gpio, !ret);
+		usleep_range(12000, 12100);
+
+		ret = 0;
+		break;
+
+	default:
+		ret = -EINVAL;
+	}
+
+	mutex_unlock(&iqs269->lock);
+
+err_put_dev:
+	put_device(&client->dev);
+
+err_put_node:
+	of_node_put(np);
+
+	return ret;
+}
+EXPORT_SYMBOL_GPL(iqs269_sync);
 
 static struct i2c_driver iqs269_i2c_driver = {
 	.driver = {
