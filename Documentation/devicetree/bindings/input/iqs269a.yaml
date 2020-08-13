@@ -171,10 +171,26 @@ properties:
   azoteq,gpio3-select:
     $ref: /schemas/types.yaml#/definitions/uint32
     minimum: 0
-    maximum: 7
+    maximum: 9
     default: 0
+    description: |
+      Selects the function of the GPIO3 pin as follows:
+      0: Channel 0 touch output
+      1: Channel 1 touch output
+      2: Channel 2 touch output
+      3: Channel 3 touch output
+      4: Channel 4 touch output
+      5: Channel 5 touch output
+      6: Channel 6 touch output
+      7: Channel 7 touch output
+      8: Active-low synchronization input/output
+      9: Edge-triggered synchronization input
+
+  sync-gpios:
+    maxItems: 1
     description:
-      Selects the channel for which the GPIO3 pin represents touch state.
+      Specifies the GPIO to which the device's GPIO3 pin is connected while the
+      latter is used as a synchronization input/output.
 
   azoteq,dual-direction:
     type: boolean
