@@ -163,7 +163,7 @@
 #define IQS269_NUM_CH				8
 #define IQS269_NUM_SL				2
 
-#define iqs269_irq_wait()			usleep_range(100, 150)
+#define iqs269_irq_wait()			usleep_range(200, 250)
 
 enum iqs269_local_cap_size {
 	IQS269_LOCAL_CAP_SIZE_0,
