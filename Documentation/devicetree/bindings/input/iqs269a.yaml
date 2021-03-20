@@ -57,12 +57,27 @@ properties:
     type: boolean
     description: Divides the device's core clock by a factor of 4.
 
+  azoteq,ulp-enable:
+    type: boolean
+    description:
+      Permits the device to automatically enter ultra-low-power mode from low-
+      power mode.
+
   azoteq,ulp-update:
     $ref: /schemas/types.yaml#/definitions/uint32
-    minimum: 0
-    maximum: 7
+    enum: [0, 1, 2, 3, 4, 5, 6, 7]
     default: 3
-    description: Specifies the ultra-low-power mode update rate.
+    description: |
+      Specifies the rate at which channels 1 through 7 are updated during ultra-
+      low-power mode as follows:
+      0: 2
+      1: 4
+      2: 8
+      3: 16
+      4: 32
+      5: 64
+      6: 128
+      7: 256
 
   azoteq,reseed-offset:
     type: boolean
@@ -123,8 +138,9 @@ properties:
     maximum: 130560
     default: 2560
     description:
-      Specifies the length of time (in ms) to wait for an event during normal-
-      power mode before transitioning to low-power mode.
+      Specifies the length of time (in ms) to wait for an event before moving
+      from normal-power mode to low-power mode, or (if 'azoteq,ulp-enable' is
+      present) from low-power mode to ultra-low-power mode.
 
   azoteq,timeout-lta-ms:
     multipleOf: 512
