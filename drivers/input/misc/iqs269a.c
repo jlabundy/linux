@@ -1028,18 +1028,13 @@ static int iqs269_parse_prop(struct iqs269_private *iqs269)
 	sys_reg->redo_ati = sys_reg->active;
 
 	general = be16_to_cpu(sys_reg->general);
+	general &= IQS269_SYS_SETTINGS_ULP_UPDATE_MASK;
 
 	if (device_property_present(&client->dev, "azoteq,clk-div"))
 		general |= IQS269_SYS_SETTINGS_CLK_DIV;
 
-	/*
-	 * Configure the device to automatically switch between normal and low-
-	 * power modes as a function of sensing activity. Ultra-low-power mode,
-	 * if enabled, is reserved for suspend.
-	 */
-	general &= ~IQS269_SYS_SETTINGS_ULP_AUTO;
-	general &= ~IQS269_SYS_SETTINGS_DIS_AUTO;
-	general &= ~IQS269_SYS_SETTINGS_PWR_MODE_MASK;
+	if (device_property_present(&client->dev, "azoteq,ulp-enable"))
+		general |= IQS269_SYS_SETTINGS_ULP_AUTO;
 
 	if (!device_property_read_u32(&client->dev, "azoteq,suspend-mode",
 				      &val)) {
@@ -1133,7 +1128,6 @@ static int iqs269_parse_prop(struct iqs269_private *iqs269)
 		sys_reg->event_mask &= ~IQS269_EVENT_MASK_GESTURE;
 	}
 
-	general &= ~IQS269_SYS_SETTINGS_RESEED_OFFSET;
 	if (device_property_present(&client->dev, "azoteq,reseed-offset"))
 		general |= IQS269_SYS_SETTINGS_RESEED_OFFSET;
 
