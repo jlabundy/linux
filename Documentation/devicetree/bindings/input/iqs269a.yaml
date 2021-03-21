@@ -487,6 +487,18 @@ patternProperties:
             $ref: /schemas/types.yaml#/definitions/uint32
             description: Numeric key or switch code associated with the event.
 
+          linux,input-type:
+            $ref: /schemas/types.yaml#/definitions/uint32
+            enum: [1, 5]
+            description:
+              Specifies whether the event is to be interpreted as a key (1) or
+              a switch (5). By default, Hall-channel events are interpreted as
+              switches if 'azoteq,hall-enable' is present and all other events
+              are interpreted as keys.
+
+        dependencies:
+          linux,input-type: ["linux,code"]
+
         additionalProperties: false
 
       "^event-touch(-alt)?$":
@@ -512,6 +524,18 @@ patternProperties:
             $ref: /schemas/types.yaml#/definitions/uint32
             description: Numeric key or switch code associated with the event.
 
+          linux,input-type:
+            $ref: /schemas/types.yaml#/definitions/uint32
+            enum: [1, 5]
+            description:
+              Specifies whether the event is to be interpreted as a key (1) or
+              a switch (5). By default, Hall-channel events are interpreted as
+              switches if 'azoteq,hall-enable' is present and all other events
+              are interpreted as keys.
+
+        dependencies:
+          linux,input-type: ["linux,code"]
+
         additionalProperties: false
 
       "^event-deep(-alt)?$":
@@ -536,6 +560,18 @@ patternProperties:
           linux,code:
             $ref: /schemas/types.yaml#/definitions/uint32
             description: Numeric key or switch code associated with the event.
+
+          linux,input-type:
+            $ref: /schemas/types.yaml#/definitions/uint32
+            enum: [1, 5]
+            description:
+              Specifies whether the event is to be interpreted as a key (1) or
+              a switch (5). By default, Hall-channel events are interpreted as
+              switches if 'azoteq,hall-enable' is present and all other events
+              are interpreted as keys.
+
+        dependencies:
+          linux,input-type: ["linux,code"]
 
         additionalProperties: false
 
