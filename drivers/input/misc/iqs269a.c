@@ -207,11 +207,6 @@ enum iqs269_gesture_id {
 	IQS269_NUM_GESTURES,
 };
 
-struct iqs269_switch_desc {
-	unsigned int code;
-	bool enabled;
-};
-
 struct iqs269_event_desc {
 	const char *name;
 	enum iqs269_st_offs st_offs;
@@ -316,13 +311,13 @@ struct iqs269_private {
 	struct i2c_client *client;
 	struct regmap *regmap;
 	struct mutex lock;
-	struct iqs269_switch_desc switches[ARRAY_SIZE(iqs269_events)];
 	struct iqs269_ver_info ver_info;
 	struct iqs269_sys_reg sys_reg;
 	struct completion ati_done;
 	struct input_dev *keypad;
 	struct input_dev *slider[IQS269_NUM_SL];
-	unsigned int keycode[ARRAY_SIZE(iqs269_events) * IQS269_NUM_CH];
+	unsigned int kp_type[IQS269_NUM_CH][ARRAY_SIZE(iqs269_events)];
+	unsigned int kp_code[IQS269_NUM_CH][ARRAY_SIZE(iqs269_events)];
 	unsigned int sl_code[IQS269_NUM_SL][IQS269_NUM_GESTURES];
 	unsigned int otp_option;
 	unsigned int ch_num;
@@ -748,22 +743,38 @@ static int iqs269_parse_chan(struct iqs269_private *iqs269,
 		if (fwnode_property_read_u32(ev_node, "linux,code", &val))
 			continue;
 
-		switch (reg) {
-		case IQS269_CHx_HALL_ACTIVE:
-			if (iqs269->hall_enable) {
-				iqs269->switches[i].code = val;
-				iqs269->switches[i].enabled = true;
+		iqs269->kp_code[reg][i] = val;
+
+		if (fwnode_property_read_u32(ev_node, "linux,input-type",
+					     &val)) {
+			/*
+			 * Hall-effect sensing repurposes a pair of dedicated
+			 * channels, only one of which reports events.
+			 */
+			switch (reg) {
+			case IQS269_CHx_HALL_ACTIVE:
+				if (iqs269->hall_enable)
+					val = EV_SW;
+				fallthrough;
+
+			case IQS269_CHx_HALL_INACTIVE:
+				if (iqs269->hall_enable)
+					break;
+				fallthrough;
+
+			default:
+				val = EV_KEY;
 			}
-			fallthrough;
-
-		case IQS269_CHx_HALL_INACTIVE:
-			if (iqs269->hall_enable)
-				break;
-			fallthrough;
-
-		default:
-			iqs269->keycode[i * IQS269_NUM_CH + reg] = val;
 		}
+
+		if (val != EV_KEY && val != EV_SW) {
+			dev_err(&client->dev,
+				"Invalid channel %u input type: %u\n", reg,
+				val);
+			return -EINVAL;
+		}
+
+		iqs269->kp_type[reg][i] = val;
 
 		iqs269->sys_reg.event_mask &= ~iqs269_events[i].mask;
 	}
@@ -1202,48 +1213,30 @@ err_mutex:
 static int iqs269_input_init(struct iqs269_private *iqs269)
 {
 	struct i2c_client *client = iqs269->client;
-	unsigned int sw_code, keycode;
 	int error, i, j;
 
 	iqs269->keypad = devm_input_allocate_device(&client->dev);
 	if (!iqs269->keypad)
 		return -ENOMEM;
 
-	iqs269->keypad->keycodemax = ARRAY_SIZE(iqs269->keycode);
-	iqs269->keypad->keycode = iqs269->keycode;
-	iqs269->keypad->keycodesize = sizeof(*iqs269->keycode);
+	iqs269->keypad->keycodemax = ARRAY_SIZE(iqs269->kp_code);
+	iqs269->keypad->keycode = iqs269->kp_code;
+	iqs269->keypad->keycodesize = sizeof(**iqs269->kp_code);
 
 	iqs269->keypad->name = "iqs269a_keypad";
 	iqs269->keypad->id.bustype = BUS_I2C;
 
-	for (i = 0; i < ARRAY_SIZE(iqs269_events); i++) {
-		sw_code = iqs269->switches[i].code;
+	for (i = 0; i < IQS269_NUM_CH; i++) {
+		if (!(iqs269->sys_reg.active & BIT(i)))
+			continue;
 
-		for (j = 0; j < IQS269_NUM_CH; j++) {
-			keycode = iqs269->keycode[i * IQS269_NUM_CH + j];
+		for (j = 0; j < ARRAY_SIZE(iqs269_events); j++) {
+			if (!iqs269->kp_type[i][j])
+				continue;
 
-			/*
-			 * Hall-effect sensing repurposes a pair of dedicated
-			 * channels, only one of which reports events.
-			 */
-			switch (j) {
-			case IQS269_CHx_HALL_ACTIVE:
-				if (iqs269->hall_enable &&
-				    iqs269->switches[i].enabled)
-					input_set_capability(iqs269->keypad,
-							     EV_SW, sw_code);
-				fallthrough;
-
-			case IQS269_CHx_HALL_INACTIVE:
-				if (iqs269->hall_enable)
-					continue;
-				fallthrough;
-
-			default:
-				if (keycode != KEY_RESERVED)
-					input_set_capability(iqs269->keypad,
-							     EV_KEY, keycode);
-			}
+			input_set_capability(iqs269->keypad,
+					     iqs269->kp_type[i][j],
+					     iqs269->kp_code[i][j]);
 		}
 	}
 
@@ -1295,10 +1288,10 @@ static int iqs269_report(struct iqs269_private *iqs269)
 {
 	struct i2c_client *client = iqs269->client;
 	struct iqs269_flags flags;
-	unsigned int sw_code, keycode;
 	int error, i, j;
 	u8 slider_x[IQS269_NUM_SL];
-	u8 dir_mask, state;
+	u8 state;
+	u8 *dir_mask = &flags.states[IQS269_ST_OFFS_DIR];
 
 	error = regmap_raw_read(iqs269->regmap, IQS269_SYS_FLAGS, &flags,
 				sizeof(flags));
@@ -1388,36 +1381,20 @@ static int iqs269_report(struct iqs269_private *iqs269)
 		input_sync(iqs269->slider[i]);
 	}
 
-	for (i = 0; i < ARRAY_SIZE(iqs269_events); i++) {
-		dir_mask = flags.states[IQS269_ST_OFFS_DIR];
-		if (!iqs269_events[i].dir_up)
-			dir_mask = ~dir_mask;
+	for (i = 0; i < IQS269_NUM_CH; i++) {
+		if (!(iqs269->sys_reg.active & BIT(i)))
+			continue;
 
-		state = flags.states[iqs269_events[i].st_offs] & dir_mask;
+		for (j = 0; j < ARRAY_SIZE(iqs269_events); j++) {
+			if (!iqs269->kp_type[i][j])
+				continue;
 
-		sw_code = iqs269->switches[i].code;
+			state = flags.states[iqs269_events[j].st_offs] & BIT(i);
+			state &= iqs269_events[j].dir_up ? *dir_mask
+							 : ~(*dir_mask);
 
-		for (j = 0; j < IQS269_NUM_CH; j++) {
-			keycode = iqs269->keycode[i * IQS269_NUM_CH + j];
-
-			switch (j) {
-			case IQS269_CHx_HALL_ACTIVE:
-				if (iqs269->hall_enable &&
-				    iqs269->switches[i].enabled)
-					input_report_switch(iqs269->keypad,
-							    sw_code,
-							    state & BIT(j));
-				fallthrough;
-
-			case IQS269_CHx_HALL_INACTIVE:
-				if (iqs269->hall_enable)
-					continue;
-				fallthrough;
-
-			default:
-				input_report_key(iqs269->keypad, keycode,
-						 state & BIT(j));
-			}
+			input_event(iqs269->keypad, iqs269->kp_type[i][j],
+				    iqs269->kp_code[i][j], !!state);
 		}
 	}
 
