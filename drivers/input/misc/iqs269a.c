@@ -384,8 +384,8 @@ static int iqs269_ati_mode_set(struct iqs269_private *iqs269,
 	return 0;
 }
 
-static int iqs269_ati_mode_get(struct iqs269_private *iqs269,
-			       unsigned int ch_num, unsigned int *mode)
+static unsigned int iqs269_ati_mode_get(struct iqs269_private *iqs269,
+					unsigned int ch_num)
 {
 	struct iqs269_ch_reg *ch_reg = &iqs269->sys_reg.ch_reg[ch_num];
 	u16 engine_a;
@@ -394,10 +394,8 @@ static int iqs269_ati_mode_get(struct iqs269_private *iqs269,
 	engine_a = be16_to_cpu(ch_reg->engine_a);
 	mutex_unlock(&iqs269->lock);
 
-	engine_a &= IQS269_CHx_ENG_A_ATI_MODE_MASK;
-	*mode = (engine_a >> IQS269_CHx_ENG_A_ATI_MODE_SHIFT);
-
-	return 0;
+	return (engine_a & IQS269_CHx_ENG_A_ATI_MODE_MASK) >>
+			   IQS269_CHx_ENG_A_ATI_MODE_SHIFT;
 }
 
 static int iqs269_ati_base_set(struct iqs269_private *iqs269,
@@ -442,8 +440,8 @@ static int iqs269_ati_base_set(struct iqs269_private *iqs269,
 	return 0;
 }
 
-static int iqs269_ati_base_get(struct iqs269_private *iqs269,
-			       unsigned int ch_num, unsigned int *base)
+static unsigned int iqs269_ati_base_get(struct iqs269_private *iqs269,
+					unsigned int ch_num)
 {
 	struct iqs269_ch_reg *ch_reg = &iqs269->sys_reg.ch_reg[ch_num];
 	u16 engine_b;
@@ -454,23 +452,19 @@ static int iqs269_ati_base_get(struct iqs269_private *iqs269,
 
 	switch (engine_b & IQS269_CHx_ENG_B_ATI_BASE_MASK) {
 	case IQS269_CHx_ENG_B_ATI_BASE_75:
-		*base = 75;
-		return 0;
+		return 75;
 
 	case IQS269_CHx_ENG_B_ATI_BASE_100:
-		*base = 100;
-		return 0;
+		return 100;
 
 	case IQS269_CHx_ENG_B_ATI_BASE_150:
-		*base = 150;
-		return 0;
+		return 150;
 
 	case IQS269_CHx_ENG_B_ATI_BASE_200:
-		*base = 200;
-		return 0;
+		return 200;
 
 	default:
-		return -EINVAL;
+		return 0;
 	}
 }
 
@@ -498,8 +492,8 @@ static int iqs269_ati_target_set(struct iqs269_private *iqs269,
 	return 0;
 }
 
-static int iqs269_ati_target_get(struct iqs269_private *iqs269,
-				 unsigned int ch_num, unsigned int *target)
+static unsigned int iqs269_ati_target_get(struct iqs269_private *iqs269,
+					  unsigned int ch_num)
 {
 	struct iqs269_ch_reg *ch_reg = &iqs269->sys_reg.ch_reg[ch_num];
 	u16 engine_b;
@@ -508,9 +502,7 @@ static int iqs269_ati_target_get(struct iqs269_private *iqs269,
 	engine_b = be16_to_cpu(ch_reg->engine_b);
 	mutex_unlock(&iqs269->lock);
 
-	*target = (engine_b & IQS269_CHx_ENG_B_ATI_TARGET_MASK) * 32;
-
-	return 0;
+	return (engine_b & IQS269_CHx_ENG_B_ATI_TARGET_MASK) * 32;
 }
 
 static int iqs269_parse_mask(const struct fwnode_handle *fwnode,
@@ -1667,14 +1659,9 @@ static ssize_t ati_mode_show(struct device *dev,
 			     struct device_attribute *attr, char *buf)
 {
 	struct iqs269_private *iqs269 = dev_get_drvdata(dev);
-	unsigned int val;
-	int error;
 
-	error = iqs269_ati_mode_get(iqs269, iqs269->ch_num, &val);
-	if (error)
-		return error;
-
-	return scnprintf(buf, PAGE_SIZE, "%u\n", val);
+	return scnprintf(buf, PAGE_SIZE, "%u\n",
+			 iqs269_ati_mode_get(iqs269, iqs269->ch_num));
 }
 
 static ssize_t ati_mode_store(struct device *dev,
@@ -1700,14 +1687,9 @@ static ssize_t ati_base_show(struct device *dev,
 			     struct device_attribute *attr, char *buf)
 {
 	struct iqs269_private *iqs269 = dev_get_drvdata(dev);
-	unsigned int val;
-	int error;
 
-	error = iqs269_ati_base_get(iqs269, iqs269->ch_num, &val);
-	if (error)
-		return error;
-
-	return scnprintf(buf, PAGE_SIZE, "%u\n", val);
+	return scnprintf(buf, PAGE_SIZE, "%u\n",
+			 iqs269_ati_base_get(iqs269, iqs269->ch_num));
 }
 
 static ssize_t ati_base_store(struct device *dev,
@@ -1733,14 +1715,9 @@ static ssize_t ati_target_show(struct device *dev,
 			       struct device_attribute *attr, char *buf)
 {
 	struct iqs269_private *iqs269 = dev_get_drvdata(dev);
-	unsigned int val;
-	int error;
 
-	error = iqs269_ati_target_get(iqs269, iqs269->ch_num, &val);
-	if (error)
-		return error;
-
-	return scnprintf(buf, PAGE_SIZE, "%u\n", val);
+	return scnprintf(buf, PAGE_SIZE, "%u\n",
+			 iqs269_ati_target_get(iqs269, iqs269->ch_num));
 }
 
 static ssize_t ati_target_store(struct device *dev,
