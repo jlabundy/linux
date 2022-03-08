@@ -1,0 +1,62 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
+// Definitions for Azoteq AZP1176B1 + IQS7219A SAR proximity sensor
+/dts-v1/;
+/plugin/;
+#include <dt-bindings/gpio/gpio.h>
+
+/ {
+	compatible = "brcm,bcm2835";
+
+	fragment@0 {
+		target = <&i2c1>;
+		__overlay__ {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			status = "okay";
+
+			iqs7219a: iqs7219a@56 {
+				compatible = "azoteq,iqs7219a";
+				reg = <0x56>;
+				irq-gpios = <&gpio 4 GPIO_ACTIVE_LOW>;
+				pinctrl-names = "default";
+				pinctrl-0 = <&iqs7219a_pins>;
+
+				channel-0 {
+					event-prox {
+						azoteq,lta-track;
+					};
+				};
+
+				channel-1 {
+					event-prox {
+						azoteq,lta-track;
+					};
+				};
+			};
+		};
+	};
+
+	fragment@1 {
+		target = <&iqs7219a>;
+		iqs7219a_reset: __dormant__ {
+			reset-gpios = <&gpio 255 (GPIO_ACTIVE_LOW |
+						  GPIO_PUSH_PULL)>;
+		};
+	};
+
+	fragment@2 {
+		target = <&gpio>;
+		__overlay__ {
+			iqs7219a_pins: iqs7219a_pins {
+				brcm,pins = <4>;
+				brcm,pull = <2>;
+			};
+		};
+	};
+
+	__overrides__ {
+		interrupt = <&iqs7219a_pins>,"brcm,pins:0",
+			    <&iqs7219a>,"irq-gpios:4";
+		reset = <0>,"+1", <&iqs7219a_reset>,"reset-gpios:4";
+	};
+};

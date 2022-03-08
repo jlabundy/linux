@@ -2109,6 +2109,14 @@ Params: interrupt               GPIO used for interrupt (default 4)
         swapxy                  Touchscreen swapped x y axis
 
 
+Name:   iqs7219
+Info:   Enables I2C connected Azoteq IQS7219A SAR proximity sensor using GPIO 4
+        (pin 7 on GPIO header) for interrupt.
+Load:   dtoverlay=iqs7219,<param>=<val>
+Params: interrupt               GPIO used for interrupt (default 4)
+        reset                   GPIO used for reset (optional)
+
+
 Name:   irs1125
 Info:   Infineon irs1125 TOF camera module.
         Uses Unicam 1, which is the standard camera connector on most Pi
