@@ -32,6 +32,42 @@ config CROS_EC_MKBP_PROXIMITY
 	  To compile this driver as a module, choose M here: the
 	  module will be called cros_ec_mkbp_proximity.
 
+config IQS7219
+	tristate "Azoteq IQS7219A SAR proximity sensor"
+	select IIO_BUFFER
+	select IIO_TRIGGERED_BUFFER
+	depends on I2C
+	help
+	  Say Y to enable support for the Azoteq IQS7219A SAR proximity
+	  sensor.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called iqs7219.
+
+config IQS7219_HIDE_EVENTS
+	bool "Azoteq IQS7219A IIO events concealment"
+	depends on IQS7219
+	help
+	  Prohibits the Azoteq IQS7219A driver from advertising support
+	  for IIO events.
+
+config IQS7219_SINGLE_CHAN
+	bool "Azoteq IQS7219A channel concealment"
+	depends on IQS7219
+	help
+	  Prohibits the Azoteq IQS7219A driver from advertising support
+	  for more than one channel.
+
+config IQS7219_HAL_TEST
+	bool "Azoteq IQS7219A IIO sensors HAL test support"
+	select IQS7219_HIDE_EVENTS
+	select IQS7219_SINGLE_CHAN
+	depends on IQS7219
+	help
+	  This option prompts the IIO sensors HAL to open the device as
+	  a triggered sensor rather than an event-based sensor, thereby
+	  exposing variable proximity data as opposed to near/far state.
+
 config ISL29501
 	tristate "Intersil ISL29501 Time Of Flight sensor"
 	depends on I2C
