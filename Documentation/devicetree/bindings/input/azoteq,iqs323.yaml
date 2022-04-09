@@ -1,0 +1,790 @@
+# SPDX-License-Identifier: (GPL-2.0-only OR BSD-2-Clause)
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/input/azoteq,iqs323.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: Azoteq IQS323 Capacitive/Inductive Sensing Controller
+
+maintainers:
+  - Jeff LaBundy <jeff@labundy.com>
+
+description: |
+  The Azoteq IQS323 is a three-channel sensing controller that features self-
+  capacitive, mutual-capacitive and inductive sensing capabilities.
+
+  Link to datasheet: https://www.azoteq.com/
+
+properties:
+  compatible:
+    const: azoteq,iqs323
+
+  reg:
+    maxItems: 1
+
+  irq-gpios:
+    maxItems: 1
+    description:
+      Specifies the GPIO connected to the device's active-low bidirectional
+      RDY/MCLR pin. This GPIO must be configured as open-drain.
+
+  azoteq,counts-beta-lp:
+    $ref: /schemas/types.yaml#/definitions/uint32
+    minimum: 0
+    maximum: 255
+    description:
+      Specifies the counts filter damping factor to be applied during low-power
+      mode.
+
+  azoteq,counts-beta-np:
+    $ref: /schemas/types.yaml#/definitions/uint32
+    minimum: 0
+    maximum: 255
+    description:
+      Specifies the counts filter damping factor to be applied during normal-
+      power mode.
+
+  azoteq,lta-beta-lp:
+    $ref: /schemas/types.yaml#/definitions/uint32
+    minimum: 0
+    maximum: 255
+    description:
+      Specifies the long-term average filter damping factor to be applied during
+      low-power mode.
+
+  azoteq,lta-beta-np:
+    $ref: /schemas/types.yaml#/definitions/uint32
+    minimum: 0
+    maximum: 255
+    description:
+      Specifies the long-term average filter damping factor to be applied during
+      normal-power mode.
+
+  azoteq,lta-fast-beta-lp:
+    $ref: /schemas/types.yaml#/definitions/uint32
+    minimum: 0
+    maximum: 255
+    description:
+      Specifies the long-term average filter fast damping factor to be applied
+      during low-power mode.
+
+  azoteq,lta-fast-beta-np:
+    $ref: /schemas/types.yaml#/definitions/uint32
+    minimum: 0
+    maximum: 255
+    description:
+      Specifies the long-term average filter fast damping factor to be applied
+      during normal-power mode.
+
+  azoteq,press-lta-beta-lp:
+    $ref: /schemas/types.yaml#/definitions/uint32
+    minimum: 0
+    maximum: 255
+    description:
+      Specifies the activation/movement long-term average filter damping factor
+      to be applied during low-power mode.
+
+  azoteq,press-lta-beta-np:
+    $ref: /schemas/types.yaml#/definitions/uint32
+    minimum: 0
+    maximum: 255
+    description:
+      Specifies the activation/movement long-term average filter damping factor
+      to be applied during normal-power mode.
+
+  azoteq,fast-filt-band:
+    $ref: /schemas/types.yaml#/definitions/uint32
+    minimum: 0
+    maximum: 65535
+    description: Specifies the fast filter band.
+
+  azoteq,power-mode:
+    $ref: /schemas/types.yaml#/definitions/uint32
+    enum: [0, 1, 2, 3, 4, 5]
+    description: |
+      Specifies the power mode as follows:
+      0: Normal power
+      1: Low power
+      2: Ultra-low power
+      3: Halt
+      4: Automatic
+      5: Automatic (without ultra-low-power mode)
+
+  azoteq,rate-np-ms:
+    minimum: 0
+    maximum: 3000
+    description: Specifies the report rate (in ms) during normal-power mode.
+
+  azoteq,rate-lp-ms:
+    minimum: 0
+    maximum: 3000
+    description: Specifies the report rate (in ms) during low-power mode.
+
+  azoteq,rate-ulp-ms:
+    minimum: 0
+    maximum: 3000
+    description: Specifies the report rate (in ms) during ultra-low-power mode.
+
+  azoteq,rate-halt-ms:
+    minimum: 0
+    maximum: 3000
+    description: Specifies the report rate (in ms) during halt mode.
+
+  azoteq,timeout-xp-ms:
+    minimum: 0
+    maximum: 65000
+    description:
+      Specifies the length of time (in ms) to wait for an event before moving
+      to the next power mode.
+
+  azoteq,timeout-comms-ms:
+    minimum: 2
+    maximum: 230
+    description:
+      Specifies the delay (in ms) before a communication window is closed.
+
+  wakeup-source: true
+
+  release:
+    type: object
+    description:
+      Represents the device's release user interface (IQS323001 only).
+
+    properties:
+      azoteq,thresh:
+        $ref: /schemas/types.yaml#/definitions/uint32
+        minimum: 0
+        maximum: 255
+        description: Specifies the activation threshold.
+
+      azoteq,delta-delay:
+        $ref: /schemas/types.yaml#/definitions/uint32
+        minimum: 0
+        maximum: 255
+        description: Specifies the delta snapshot sample delay.
+
+      azoteq,delta-weight:
+        $ref: /schemas/types.yaml#/definitions/uint32
+        minimum: 0
+        maximum: 128
+        description: Specifies the delta weight, expressed as fraction of 128.
+
+    additionalProperties: false
+
+  gpio:
+    type: object
+    description: Represents the device's active-high push-pull OutA pin.
+
+    allOf:
+      - $ref: ../pinctrl/pincfg-node.yaml#
+
+    properties:
+      output-high: true
+
+      azoteq,invert-enable:
+        type: boolean
+        description: Inverts the polarity of the pin.
+
+    additionalProperties: false
+
+  slider:
+    type: object
+    description: Represents a slider comprising up to three channels.
+
+    properties:
+      azoteq,channel-select:
+        $ref: /schemas/types.yaml#/definitions/uint32-array
+        minItems: 1
+        maxItems: 3
+        items:
+          minimum: 0
+          maximum: 2
+        description:
+          Specifies the order of the channels that participate in the slider.
+
+      azoteq,slider-size:
+        $ref: /schemas/types.yaml#/definitions/uint32
+        minimum: 1
+        maximum: 65535
+        description:
+          Specifies the slider's one-dimensional resolution, equal to the
+          maximum coordinate plus one.
+
+      azoteq,lower-cal:
+        $ref: /schemas/types.yaml#/definitions/uint32
+        minimum: 0
+        maximum: 255
+        description: Specifies the slider's lower starting point.
+
+      azoteq,upper-cal:
+        $ref: /schemas/types.yaml#/definitions/uint32
+        minimum: 0
+        maximum: 255
+        description: Specifies the slider's upper starting point.
+
+      azoteq,top-speed:
+        $ref: /schemas/types.yaml#/definitions/uint32
+        minimum: 0
+        maximum: 65535
+        description:
+          Specifies the speed of movement after which coordinate filtering is
+          no longer applied.
+
+      azoteq,bottom-speed:
+        $ref: /schemas/types.yaml#/definitions/uint32
+        minimum: 0
+        maximum: 255
+        description:
+          Specifies the speed of movement after which coordinate filtering is
+          linearly reduced.
+
+      azoteq,bottom-beta:
+        $ref: /schemas/types.yaml#/definitions/uint32
+        minimum: 0
+        maximum: 7
+        description:
+          Specifies the coordinate filter damping factor to be applied
+          while the speed of movement is below that which is specified
+          by azoteq,bottom-speed.
+
+      azoteq,static-beta:
+        type: boolean
+        description:
+          Applies the coordinate filter damping factor specified by
+          azoteq,bottom-beta regardless of the speed of movement.
+
+      linux,axis:
+        $ref: /schemas/types.yaml#/definitions/uint32
+        description:
+          Specifies the absolute axis to which coordinates are mapped.
+
+    patternProperties:
+      "^event-(press|tap|hold|(swipe|flick)-(pos|neg))$":
+        type: object
+        $ref: input.yaml#
+        description: Represents a press or gesture event reported by the slider.
+
+        properties:
+          azoteq,gesture-max-ms:
+            minimum: 0
+            maximum: 65535
+            description:
+              Specifies the length of time (in ms) within which a tap, swipe
+              or flick gesture must be completed in order to be acknowledged
+              by the device. The number specified for any one swipe or flick
+              gesture applies to all remaining swipe or flick gestures.
+
+          azoteq,gesture-min-ms:
+            minimum: 0
+            maximum: 65535
+            description:
+              Specifies the length of time (in ms) for which a tap or hold
+              gesture must be held in order to be recognized by the device.
+
+          azoteq,gesture-dist:
+            $ref: /schemas/types.yaml#/definitions/uint32
+            minimum: 0
+            maximum: 65535
+            description:
+              Specifies the distance across which a swipe or flick gesture must
+              travel in order to be acknowledged by the device. The number spec-
+              ified for any one swipe or flick gesture applies to all remaining
+              swipe or flick gestures.
+
+              In the case of tap gestures, this property specifies the limit of
+              travel before the gesture is rejected by the device.
+
+          azoteq,gpio-select:
+            type: boolean
+            description: Maps the gesture event to the device's OutA pin.
+
+          linux,code: true
+
+        additionalProperties: false
+
+    required:
+      - azoteq,channel-select
+
+    additionalProperties: false
+
+patternProperties:
+  "^channel-[0-2]$":
+    type: object
+    description:
+      Represents a single sensing channel. A channel is active if defined and
+      inactive otherwise.
+
+    properties:
+      azoteq,tx-freq-fosc:
+        type: boolean
+        description:
+          Fixes the conversion frequency to that of the device's core clock.
+
+      azoteq,vbias-enable:
+        type: boolean
+        description: Enables the bias voltage for use during inductive sensing.
+
+      azoteq,invert-enable:
+        type: boolean
+        description:
+          Inverts the polarity of the states reported for proximity and touch
+          events relative to their respective thresholds.
+
+      azoteq,dual-direction:
+        type: boolean
+        description:
+          Specifies that the channel's long-term average is to freeze in the
+          presence of either increasing or decreasing counts, thereby permit-
+          ting events to be reported in either direction.
+
+      azoteq,linearize:
+        type: boolean
+        description: Enables linearization of the channel's counts.
+
+      azoteq,conv-period:
+        $ref: /schemas/types.yaml#/definitions/uint32
+        minimum: 0
+        maximum: 255
+        description: Specifies the channel's conversion period.
+
+      azoteq,conv-frac:
+        $ref: /schemas/types.yaml#/definitions/uint32
+        minimum: 0
+        maximum: 255
+        description: Specifies the channel's conversion frequency fraction.
+
+      azoteq,dead-time-enable:
+        type: boolean
+        description:
+          Increases the denominator of the conversion frequency formula by one.
+
+      azoteq,vref-half:
+        type: boolean
+        description: Halves the discharge threshold from 1.0 V to 0.5 V.
+
+      azoteq,samp-cap-double:
+        type: boolean
+        description: Doubles the sampling capacitance from 40 pF to 80 pF.
+
+      azoteq,proj-bias:
+        $ref: /schemas/types.yaml#/definitions/uint32
+        enum: [0, 1, 2, 3]
+        description: |
+          Specifies the bias current applied during mutual (projected)
+          capacitive sensing as follows:
+          0: 2 uA
+          1: 5 uA
+          2: 7 uA
+          3: 10 uA
+
+      azoteq,max-counts:
+        $ref: /schemas/types.yaml#/definitions/uint32
+        enum: [0, 1, 2, 3]
+        description: |
+          Specifies the maximum number of conversion periods (counts) that can
+          be reported as follows:
+          0: 1023
+          1: 2047
+          2: 4095
+          3: 16383
+
+      azoteq,sense-mode:
+        $ref: /schemas/types.yaml#/definitions/uint32
+        enum: [0, 1, 2, 3]
+        description: |
+          Specifies the channel's sensing mode as follows:
+          0: Self capacitive
+          1: Mutual capacitive
+          2: Current measurement
+          3: Inductive
+
+      azoteq,wave-pattern-0:
+        $ref: /schemas/types.yaml#/definitions/uint32
+        minimum: 0
+        maximum: 15
+        description:
+          Specifies waveform pattern 0 displayed on the CTx pins under control
+          of the channel. This property is configured based on sensing mode if
+          it is left unspecified.
+
+      azoteq,wave-pattern-1:
+        $ref: /schemas/types.yaml#/definitions/uint32
+        minimum: 0
+        maximum: 15
+        description:
+          Specifies waveform pattern 1 displayed on the CTx pins under control
+          of the channel. This property is configured based on sensing mode if
+          it is left unspecified.
+
+      azoteq,tx-select:
+        $ref: /schemas/types.yaml#/definitions/uint32-array
+        minItems: 1
+        maxItems: 4
+        items:
+          minimum: 0
+          maximum: 3
+        description:
+          Specifies the CTx pin(s) to display waveform pattern 1. Unspecified
+          CTx pins display waveform pattern 0. Enter 3 to specify the TxA pin.
+
+      azoteq,tx-enable:
+        $ref: /schemas/types.yaml#/definitions/uint32-array
+        minItems: 1
+        maxItems: 4
+        items:
+          minimum: 0
+          maximum: 3
+        description:
+          Specifies the CTx pin(s) associated with the channel. Enter 3 to
+          specify the TxA pin.
+
+      azoteq,rx-enable:
+        $ref: /schemas/types.yaml#/definitions/uint32-array
+        minItems: 1
+        maxItems: 3
+        items:
+          minimum: 0
+          maximum: 2
+        description: Specifies the CRx pin(s) associated with the channel.
+
+      azoteq,rx-inactive:
+        $ref: /schemas/types.yaml#/definitions/uint32
+        enum: [0, 1, 2, 3]
+        description: |
+          Specifies how inactive CRx pins are to be terminated as follows:
+          0: Floating
+          1: Bias voltage
+          2: VSS
+          3: VREG
+
+      azoteq,auto-mode:
+        $ref: /schemas/types.yaml#/definitions/uint32
+        enum: [0, 1, 2, 3]
+        description: |
+          Specifies the number of conversions to occur before an interrupt is
+          generated as follows:
+          0: 4
+          1: 8
+          2: 16
+          3: 32
+
+      azoteq,tref-enable:
+        type: boolean
+        description:
+          Enables the internal temperature-dependent current reference.
+
+      azoteq,iref-enable:
+        type: boolean
+        description: Enables the sensing engine's current reference.
+
+      azoteq,iref-level:
+        $ref: /schemas/types.yaml#/definitions/uint32
+        minimum: 0
+        maximum: 15
+        description: Specifies the sensing engine's current reference level.
+
+      azoteq,iref-trim:
+        $ref: /schemas/types.yaml#/definitions/uint32
+        minimum: 0
+        maximum: 15
+        description: Specifies the sensing engine's current reference trim.
+
+      azoteq,ati-factor:
+        $ref: /schemas/types.yaml#/definitions/uint32
+        minimum: 0
+        maximum: 4095
+        description:
+          Specifies the channel's automatic tuning implementation (ATI) resolu-
+          tion factor, equal to 16 multiplied by the ATI target and divided by
+          the ATI base.
+
+      azoteq,ati-band-tighten:
+        type: boolean
+        description: Tightens the ATI band from 1/8 to 1/16 of the ATI target.
+
+      azoteq,ati-mode:
+        $ref: /schemas/types.yaml#/definitions/uint32
+        enum: [0, 1, 2, 3, 4]
+        description: |
+          Specifies the channel's ATI mode as follows:
+          0: Disabled
+          1: Compensation only
+          2: Compensation divider
+          3: Fine fractional divider
+          4: Full
+
+      azoteq,ati-base:
+        $ref: /schemas/types.yaml#/definitions/uint32
+        minimum: 0
+        maximum: 16384
+        description: Specifies the channel's ATI base.
+
+      azoteq,ati-frac-mult-fine:
+        $ref: /schemas/types.yaml#/definitions/uint32
+        minimum: 0
+        maximum: 3
+        description: Specifies the channel's ATI fine fractional multiplier.
+
+      azoteq,ati-frac-div-fine:
+        $ref: /schemas/types.yaml#/definitions/uint32
+        minimum: 0
+        maximum: 31
+        description: Specifies the channel's ATI fine fractional divider.
+
+      azoteq,ati-frac-mult-coarse:
+        $ref: /schemas/types.yaml#/definitions/uint32
+        minimum: 0
+        maximum: 15
+        description: Specifies the channel's ATI coarse fractional multiplier.
+
+      azoteq,ati-frac-div-coarse:
+        $ref: /schemas/types.yaml#/definitions/uint32
+        minimum: 0
+        maximum: 31
+        description: Specifies the channel's ATI coarse fractional divider.
+
+      azoteq,ati-comp-div:
+        $ref: /schemas/types.yaml#/definitions/uint32
+        minimum: 0
+        maximum: 31
+        description: Specifies the channel's ATI compensation divider.
+
+      azoteq,ati-comp-select:
+        $ref: /schemas/types.yaml#/definitions/uint32
+        minimum: 0
+        maximum: 1023
+        description: Specifies the channel's ATI compensation selection.
+
+      azoteq,ref-select:
+        $ref: /schemas/types.yaml#/definitions/uint32
+        minimum: 0
+        maximum: 2
+        description: Specifies a separate reference channel to be followed.
+
+      azoteq,ref-weight:
+        $ref: /schemas/types.yaml#/definitions/uint32
+        minimum: 0
+        maximum: 65535
+        description:
+          Specifies the relative weight of the reference channel, expressed as
+          a fraction of 4096.
+
+      azoteq,release-enable:
+        type: boolean
+        description:
+          Enables the release user interface for the channel (IQS323001 only).
+
+      azoteq,timeout-press-disable:
+        type: boolean
+        description:
+          Disables the press timeout for proximity or touch states reported by
+          the channel.
+
+    patternProperties:
+      "^event-(prox|touch)$|^movement$":
+        type: object
+        $ref: input.yaml#
+        description:
+          Represents a proximity or touch event reported by the channel, or the
+          channel's movement user interface properties (IQS323A01 only).
+
+        properties:
+          azoteq,debounce-enter:
+            $ref: /schemas/types.yaml#/definitions/uint32
+            minimum: 0
+            maximum: 15
+            description:
+              Specifies the proximity event or movement user interface's
+              debounce entrance factor.
+
+          azoteq,debounce-exit:
+            $ref: /schemas/types.yaml#/definitions/uint32
+            minimum: 0
+            maximum: 15
+            description:
+              Specifies the proximity event or movement user interface's
+              debounce exit factor.
+
+          azoteq,thresh:
+            $ref: /schemas/types.yaml#/definitions/uint32
+            minimum: 0
+            maximum: 255
+            description:
+              Specifies the proximity/touch event or movement user interface's
+              threshold.
+
+          azoteq,hyst:
+            $ref: /schemas/types.yaml#/definitions/uint32
+            minimum: 0
+            maximum: 255
+            description: Specifies the touch event's hysteresis.
+
+          azoteq,timeout-press-ms:
+            multipleOf: 512
+            description:
+              Specifies the length of time (in ms) to wait before automatically
+              releasing a press state. Specify zero to allow the press state to
+              persist indefinitely. The value specified for one channel applies
+              to all other channels.
+
+              Permissible values range from 0 to 130560 for proximity and touch
+              events, and 0 to 33553920 for the movement user interface.
+
+          azoteq,wear-select:
+            type: boolean
+            description:
+              Includes the proximity or touch event in the wear_status sysfs
+              attribute.
+
+          azoteq,gpio-select:
+            type: boolean
+            description:
+              Maps the proximity or touch event to the device's OutA pin.
+
+          linux,code: true
+
+          linux,input-type:
+            enum: [1, 5]
+            default: 1
+            description:
+              Specifies whether the proximity or touch event is to be inter-
+              preted as a key (1) or a switch (5).
+
+        additionalProperties: false
+
+    dependencies:
+      azoteq,iref-level: ["azoteq,iref-enable"]
+      azoteq,iref-trim: ["azoteq,iref-enable"]
+      azoteq,ref-weight: ["azoteq,ref-select"]
+
+    additionalProperties: false
+
+required:
+  - compatible
+  - reg
+  - irq-gpios
+
+additionalProperties: false
+
+examples:
+  - |
+    #include <dt-bindings/gpio/gpio.h>
+    #include <dt-bindings/input/input.h>
+
+    i2c {
+            #address-cells = <1>;
+            #size-cells = <0>;
+
+            iqs323@44 {
+                    compatible = "azoteq,iqs323";
+                    reg = <0x44>;
+                    irq-gpios = <&gpio 4 (GPIO_ACTIVE_LOW | GPIO_OPEN_DRAIN)>;
+                    azoteq,counts-beta-lp = <1>;
+                    azoteq,counts-beta-np = <2>;
+                    azoteq,lta-beta-lp = <7>;
+                    azoteq,lta-beta-np = <8>;
+                    azoteq,lta-fast-beta-lp = <3>;
+                    azoteq,lta-fast-beta-np = <4>;
+                    azoteq,fast-filt-band = <15>;
+                    azoteq,power-mode = <5>;
+                    azoteq,rate-np-ms = <16>;
+                    azoteq,rate-lp-ms = <60>;
+                    azoteq,rate-ulp-ms = <160>;
+                    azoteq,rate-halt-ms = <3000>;
+                    azoteq,timeout-xp-ms = <2000>;
+
+                    channel-0 {
+                            azoteq,samp-cap-double;
+                            azoteq,dead-time-enable;
+                            azoteq,rx-inactive = <2>;
+                            azoteq,sense-mode = <0>;
+                            azoteq,rx-enable = <0>;
+                            azoteq,tx-enable = <0>;
+                            azoteq,ati-factor = <60>;
+                            azoteq,ati-base = <150>;
+                            azoteq,ati-mode = <4>;
+
+                            event-touch {
+                                    azoteq,thresh = <15>;
+                            };
+                    };
+
+                    channel-1 {
+                            azoteq,samp-cap-double;
+                            azoteq,dead-time-enable;
+                            azoteq,rx-inactive = <2>;
+                            azoteq,sense-mode = <0>;
+                            azoteq,rx-enable = <1>;
+                            azoteq,tx-enable = <1>;
+                            azoteq,ati-factor = <60>;
+                            azoteq,ati-base = <150>;
+                            azoteq,ati-mode = <4>;
+
+                            event-touch {
+                                    azoteq,thresh = <15>;
+                            };
+                    };
+
+                    channel-2 {
+                            azoteq,samp-cap-double;
+                            azoteq,dead-time-enable;
+                            azoteq,rx-inactive = <2>;
+                            azoteq,sense-mode = <0>;
+                            azoteq,rx-enable = <2>;
+                            azoteq,tx-enable = <2>;
+                            azoteq,ati-factor = <60>;
+                            azoteq,ati-base = <150>;
+                            azoteq,ati-mode = <4>;
+
+                            event-touch {
+                                    azoteq,thresh = <15>;
+                            };
+                    };
+
+                    slider {
+                            azoteq,channel-select = <1>, <0>, <2>;
+                            azoteq,slider-size = <2048>;
+                            azoteq,top-speed = <200>;
+                            azoteq,bottom-speed = <20>;
+                            azoteq,bottom-beta = <1>;
+
+                            event-tap {
+                                    azoteq,gesture-min-ms = <10>;
+                                    azoteq,gesture-max-ms = <200>;
+                                    azoteq,gesture-dist = <200>;
+                                    azoteq,gpio-select;
+                                    linux,code = <KEY_PLAYPAUSE>;
+                            };
+
+                            event-hold {
+                                    azoteq,gesture-min-ms = <300>;
+                                    azoteq,gpio-select;
+                                    linux,code = <KEY_STOP>;
+                            };
+
+                            event-swipe-neg {
+                                    azoteq,gesture-max-ms = <300>;
+                                    azoteq,gesture-dist = <650>;
+                                    azoteq,gpio-select;
+                                    linux,code = <KEY_REWIND>;
+                            };
+
+                            event-flick-neg {
+                                    azoteq,gpio-select;
+                                    linux,code = <KEY_PREVIOUS>;
+                            };
+
+                            event-swipe-pos {
+                                    azoteq,gpio-select;
+                                    linux,code = <KEY_FASTFORWARD>;
+                            };
+
+                            event-flick-pos {
+                                    azoteq,gpio-select;
+                                    linux,code = <KEY_NEXT>;
+                            };
+                    };
+            };
+    };
+
+...
