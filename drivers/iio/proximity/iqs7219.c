@@ -955,6 +955,18 @@ static int iqs7219_dev_init(struct iqs7219_private *iqs7219, int dir)
 	int error, i, j;
 
 	/*
+	 * Acknowledge reset before writing any registers in case the device
+	 * suffers a spurious reset during initialization.
+	 */
+	if (dir == WRITE) {
+		error = iqs7219_write_word(iqs7219, IQS7219_SYS_SETUP,
+					   iqs7219->sys_setup[0] |
+					   IQS7219_SYS_SETUP_ACK_RESET);
+		if (error)
+			return error;
+	}
+
+	/*
 	 * Take advantage of the stop-bit disable function, if available, to
 	 * save the trouble of having to reopen a communication window after
 	 * each burst read or write.
@@ -1397,8 +1409,6 @@ static int iqs7219_parse_all(struct iqs7219_private *iqs7219)
 		if (error)
 			return error;
 	}
-
-	iqs7219->sys_setup[0] |= IQS7219_SYS_SETUP_ACK_RESET;
 
 	return iqs7219_parse_props(iqs7219, NULL, 0, IQS7219_REG_GRP_SYS);
 }
