@@ -876,8 +876,14 @@ static int iqs7219_ati_trigger(struct iqs7219_private *iqs7219)
 	struct i2c_client *client = iqs7219->client;
 	ktime_t ati_timeout;
 	u16 sys_status = 0;
-	u16 sys_setup = iqs7219->sys_setup[0] & ~IQS7219_SYS_SETUP_ACK_RESET;
+	u16 sys_setup;
 	int error, i;
+
+	error = iqs7219_read_word(iqs7219, IQS7219_SYS_SETUP, &sys_setup);
+	if (error)
+		return error;
+
+	sys_setup &= ~IQS7219_SYS_SETUP_INTF_MODE_MASK;
 
 	for (i = 0; i < IQS7219_NUM_RETRIES; i++) {
 		/*
@@ -1392,7 +1398,6 @@ static int iqs7219_parse_all(struct iqs7219_private *iqs7219)
 			return error;
 	}
 
-	iqs7219->sys_setup[0] &= ~IQS7219_SYS_SETUP_INTF_MODE_MASK;
 	iqs7219->sys_setup[0] |= IQS7219_SYS_SETUP_ACK_RESET;
 
 	return iqs7219_parse_props(iqs7219, NULL, 0, IQS7219_REG_GRP_SYS);
