@@ -910,11 +910,14 @@ static int iqs7219_ati_trigger(struct iqs7219_private *iqs7219)
 			if (error)
 				return error;
 
-			if (sys_status & IQS7219_SYS_STATUS_ATI_ACTIVE)
-				continue;
+			if (sys_status & IQS7219_SYS_STATUS_RESET)
+				return 0;
 
 			if (sys_status & IQS7219_SYS_STATUS_ATI_ERROR)
 				break;
+
+			if (sys_status & IQS7219_SYS_STATUS_ATI_ACTIVE)
+				continue;
 
 			sys_setup |= iqs7219->intf_mode;
 
@@ -925,7 +928,7 @@ static int iqs7219_ati_trigger(struct iqs7219_private *iqs7219)
 		dev_err(&client->dev,
 			"ATI attempt %d of %d failed with status 0x%02X, %s\n",
 			i + 1, IQS7219_NUM_RETRIES, (u8)sys_status,
-			i < IQS7219_NUM_RETRIES ? "retrying..." : "stopping");
+			i + 1 < IQS7219_NUM_RETRIES ? "retrying" : "stopping");
 	}
 
 	return -ETIMEDOUT;
