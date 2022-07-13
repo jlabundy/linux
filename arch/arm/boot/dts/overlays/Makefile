@@ -23,6 +23,7 @@ dtbo-$(CONFIG_ARCH_BCM2835) += \
 	anyspi.dtbo \
 	apds9960.dtbo \
 	applepi-dac.dtbo \
+	arducam-64mp.dtbo \
 	arducam-pivariety.dtbo \
 	at86rf233.dtbo \
 	audioinjector-addons.dtbo \
@@ -55,6 +56,7 @@ dtbo-$(CONFIG_ARCH_BCM2835) += \
 	fbtft.dtbo \
 	fe-pi-audio.dtbo \
 	fsm-demo.dtbo \
+	gc9a01.dtbo \
 	ghost-amp.dtbo \
 	goodix.dtbo \
 	googlevoicehat-soundcard.dtbo \
@@ -174,6 +176,8 @@ dtbo-$(CONFIG_ARCH_BCM2835) += \
 	pwm-ir-tx.dtbo \
 	qca7000.dtbo \
 	qca7000-uart0.dtbo \
+	ramoops.dtbo \
+	ramoops-pi4.dtbo \
 	rotary-encoder.dtbo \
 	rpi-backlight.dtbo \
 	rpi-cirrus-wm5102.dtbo \
@@ -185,7 +189,6 @@ dtbo-$(CONFIG_ARCH_BCM2835) += \
 	rpi-proto.dtbo \
 	rpi-sense.dtbo \
 	rpi-tv.dtbo \
-	rpivid-v4l2.dtbo \
 	rra-digidac1-wm8741-audio.dtbo \
 	sainsmart18.dtbo \
 	sc16is750-i2c.dtbo \

@@ -582,6 +582,21 @@ Load:   dtoverlay=applepi-dac
 Params: <None>
 
 
+Name:   arducam-64mp
+Info:   Arducam 64MP camera module.
+        Uses Unicam 1, which is the standard camera connector on most Pi
+        variants.
+Load:   dtoverlay=arducam-64mp,<param>=<val>
+Params: rotation                Mounting rotation of the camera sensor (0 or
+                                180, default 0)
+        orientation             Sensor orientation (0 = front, 1 = rear,
+                                2 = external, default external)
+        media-controller        Configure use of Media Controller API for
+                                configuring the sensor (default on)
+        cam0                    Adopt the default configuration for CAM0 on a
+                                Compute Module (CSI0, i2c_vc, and cam0_reg).
+
+
 Name:   arducam-pivariety
 Info:   Arducam Pivariety camera module.
         Uses Unicam 1, which is the standard camera connector on most Pi
@@ -1030,6 +1045,26 @@ Info:   A demonstration of the gpio-fsm driver. The GPIOs are chosen to work
         GPIOs 7, 8 and 25 respectively.
 Load:   dtoverlay=fsm-demo,<param>=<val>
 Params: fsm_debug               Enable debug logging (default off)
+
+
+Name:   gc9a01
+Info:   Enables GalaxyCore's GC9A01 single chip driver based displays on
+        SPI0 as fb1, using GPIOs DC=25, RST=27 and BL=18 (physical
+        GPIO header pins 22, 13 and 12 respectively) in addition to the
+        SPI0 pins DIN=10, CLK=11 and CS=8 (physical GPIO header pins 19,
+        23 and 24 respectively).
+Load:   dtoverlay=gc9a01,<param>=<val>
+Params: speed                   Display SPI bus speed
+
+        rotate                  Display rotation {0,90,180,270}
+
+        width                   Width of the display
+
+        height                  Height of the display
+
+        fps                     Delay between frame updates
+
+        debug                   Debug output level {0-7}
 
 
 Name:   ghost-amp
@@ -1552,6 +1587,18 @@ Params: addr                    Sets the address for the fan controller. Note
 
         i2c_csi_dsi             Choose the I2C0 bus on GPIOs 44&45
 
+        i2c3                    Choose the I2C3 bus (configure with the i2c3
+                                overlay - BCM2711 only)
+
+        i2c4                    Choose the I2C3 bus (configure with the i2c3
+                                overlay - BCM2711 only)
+
+        i2c5                    Choose the I2C5 bus (configure with the i2c4
+                                overlay - BCM2711 only)
+
+        i2c6                    Choose the I2C6 bus (configure with the i2c6
+                                overlay - BCM2711 only)
+
         minpwm                  PWM setting for the fan when the SoC is below
                                 mintemp (range 0-255. default 0)
         maxpwm                  PWM setting for the fan when the SoC is above
@@ -1654,6 +1701,8 @@ Params: abx80x                  Select one of the ABx80x family:
 
         rv3028                  Select the Micro Crystal RV3028 device
 
+        rv8803                  Select the Micro Crystal RV8803 device
+
         sd3078                  Select the ZXW Shenzhen whwave SD3078 device
 
         s35390a                 Select the ABLIC S35390A device
@@ -1661,6 +1710,18 @@ Params: abx80x                  Select one of the ABx80x family:
         i2c0                    Choose the I2C0 bus on GPIOs 0&1
 
         i2c_csi_dsi             Choose the I2C0 bus on GPIOs 44&45
+
+        i2c3                    Choose the I2C3 bus (configure with the i2c3
+                                overlay - BCM2711 only)
+
+        i2c4                    Choose the I2C3 bus (configure with the i2c3
+                                overlay - BCM2711 only)
+
+        i2c5                    Choose the I2C5 bus (configure with the i2c4
+                                overlay - BCM2711 only)
+
+        i2c6                    Choose the I2C6 bus (configure with the i2c6
+                                overlay - BCM2711 only)
 
         addr                    Sets the address for the RTC. Note that the
                                 device must be configured to use the specified
@@ -1723,6 +1784,8 @@ Params: abx80x                  Select one of the ABx80x family:
         rv1805                  Select the Micro Crystal RV1805 device
 
         rv3028                  Select the Micro Crystal RV3028 device
+
+        rv8803                  Select the Micro Crystal RV8803 device
 
         sd3078                  Select the ZXW Shenzhen whwave SD3078 device
 
@@ -1825,6 +1888,22 @@ Params: addr                    Set the address for the BH1750, BME280, BME680,
 
         veml6070                Select the Vishay VEML6070 ultraviolet light
                                 sensor
+
+        i2c0                    Choose the I2C0 bus on GPIOs 0&1
+
+        i2c_csi_dsi             Choose the I2C0 bus on GPIOs 44&45
+
+        i2c3                    Choose the I2C3 bus (configure with the i2c3
+                                overlay - BCM2711 only)
+
+        i2c4                    Choose the I2C3 bus (configure with the i2c3
+                                overlay - BCM2711 only)
+
+        i2c5                    Choose the I2C5 bus (configure with the i2c4
+                                overlay - BCM2711 only)
+
+        i2c6                    Choose the I2C6 bus (configure with the i2c6
+                                overlay - BCM2711 only)
 
 
 Name:   i2c0
@@ -2971,6 +3050,35 @@ Params: baudrate                Set the baudrate for the UART (default
                                 "115200")
 
 
+Name:   ramoops
+Info:   Enable the preservation of crash logs across a reboot. With
+        systemd-pstore enabled (as it is on Raspberry Pi OS) the crash logs
+        are moved to /var/lib/systemd/pstore/ on reboot.
+Load:   dtoverlay=ramoops,<param>=<val>
+Params: base-addr               Where to place the capture buffer (default
+                                0x0b000000)
+        total-size              How much memory to allocate altogether (in
+                                bytes - default 64kB)
+        record-size             How much space to use for each capture, i.e.
+                                total-size / record-size = number of captures
+                                (default 16kB)
+        console-size            Size of non-panic dmesg captures (default 0)
+
+
+Name:   ramoops-pi4
+Info:   The version of the ramoops overlay for the Pi 4 family. It should be
+        loaded automatically if dtoverlay=ramoops is specified on a Pi 4.
+Load:   dtoverlay=ramoops-pi4,<param>=<val>
+Params: base-addr               Where to place the capture buffer (default
+                                0x0b000000)
+        total-size              How much memory to allocate altogether (in
+                                bytes - default 64kB)
+        record-size             How much space to use for each capture, i.e.
+                                total-size / record-size = number of captures
+                                (default 16kB)
+        console-size            Size of non-panic dmesg captures (default 0)
+
+
 Name:   rotary-encoder
 Info:   Overlay for GPIO connected rotary encoder.
 Load:   dtoverlay=rotary-encoder,<param>=<val>
@@ -3130,10 +3238,9 @@ Params: <None>
 
 
 Name:   rpivid-v4l2
-Info:   Load the V4L2 stateless video decoder driver for the HEVC block,
-        disabling the memory mapped devices in the process.
-Load:   dtoverlay=rpivid-v4l2
-Params: <None>
+Info:   This overlay has been deprecated and deleted as the V4L2 stateless
+        video decoder driver is enabled by default.
+Load:   <Deprecated>
 
 
 Name:   rra-digidac1-wm8741-audio

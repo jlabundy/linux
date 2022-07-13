@@ -61,8 +61,17 @@
 		renamed = "miniuart-bt";
 	};
 
-	rpivid-v4l2 {
+	ramoops {
+		bcm2835;
+		bcm2711 = "ramoops-pi4";
+	};
+
+	ramoops-pi4 {
 		bcm2711;
+	};
+
+	rpivid-v4l2 {
+		deprecated = "no longer necessary";
 	};
 
 	sdio-1bit {
