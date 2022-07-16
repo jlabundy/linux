@@ -954,7 +954,7 @@ static int iqs7219_write_comms(struct iqs7219_private *iqs7219, u16 event_mask)
 
 static int iqs7219_dev_init(struct iqs7219_private *iqs7219, int dir)
 {
-	u16 event_mask = IQS7219_EVENT_MASK_ATI;
+	u16 event_mask = 0;
 	int error, i, j;
 
 	/*
@@ -967,6 +967,12 @@ static int iqs7219_dev_init(struct iqs7219_private *iqs7219, int dir)
 					   IQS7219_SYS_SETUP_ACK_RESET);
 		if (error)
 			return error;
+
+		for (i = 0; i < IQS7219_NUM_CHAN; i++)
+			if (iqs7219->trig_enable || iqs7219->event_enable[i])
+				event_mask |= iqs7219->event_mask[i];
+
+		event_mask |= IQS7219_EVENT_MASK_ATI;
 	}
 
 	/*
@@ -1018,10 +1024,6 @@ static int iqs7219_dev_init(struct iqs7219_private *iqs7219, int dir)
 		if (error)
 			return error;
 	}
-
-	for (i = 0; i < IQS7219_NUM_CHAN; i++)
-		if (iqs7219->trig_enable || iqs7219->event_enable[i])
-			event_mask |= iqs7219->event_mask[i];
 
 	error = iqs7219_write_comms(iqs7219, event_mask);
 	if (error)
