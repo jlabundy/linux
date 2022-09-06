@@ -45,11 +45,6 @@
 #define IQS7219_SYS_SETUP_REDO_ATI		BIT(2)
 #define IQS7219_SYS_SETUP_ACK_RESET		BIT(0)
 
-#define IQS7219_CAP_SETUP_VREF_HALF		BIT(6)
-#define IQS7219_CAP_SETUP_SAMP_DOUBLE		BIT(4)
-#define IQS7219_CAP_SETUP_COUNTS_MASK		GENMASK(1, 0)
-#define IQS7219_CAP_SETUP_COUNTS_MAX		IQS7219_CAP_SETUP_COUNTS_MASK
-
 #define IQS7219_EVENT_MASK_ALL			GENMASK(4, 0)
 #define IQS7219_EVENT_MASK_ATI			BIT(3)
 
@@ -110,11 +105,6 @@ static const char * const iqs7219_pxs_events[] = {
 	"event-touch",
 };
 
-static const char * const iqs7219_sense_modes[] = {
-	"sense-mode-proj",
-	"sense-mode-self",
-};
-
 static const unsigned int iqs7219_gpios[] = { 1, 2, 5, };
 
 enum iqs7219_scan_id {
@@ -140,7 +130,8 @@ enum iqs7219_reg_key_id {
 	IQS7219_REG_KEY_ATI,
 	IQS7219_REG_KEY_SYS,
 	IQS7219_REG_KEY_PXS,
-	IQS7219_REG_KEY_CAP,
+	IQS7219_REG_KEY_CAP_PROJ,
+	IQS7219_REG_KEY_CAP_SELF,
 	IQS7219_REG_KEY_EVENT,
 	IQS7219_REG_KEY_CHAN,
 };
@@ -149,7 +140,8 @@ enum iqs7219_reg_grp_id {
 	IQS7219_REG_GRP_ATI,
 	IQS7219_REG_GRP_SYS,
 	IQS7219_REG_GRP_PXS,
-	IQS7219_REG_GRP_CAP,
+	IQS7219_REG_GRP_CAP_PROJ,
+	IQS7219_REG_GRP_CAP_SELF,
 	IQS7219_REG_GRP_EVENT_0,
 	IQS7219_REG_GRP_EVENT_1,
 	IQS7219_REG_GRP_CHAN_0,
@@ -157,11 +149,13 @@ enum iqs7219_reg_grp_id {
 	IQS7219_NUM_REG_GRPS
 };
 
-static const char * const iqs7219_reg_grp_names[] = {
-	[IQS7219_REG_GRP_ATI] = "ati",
-	[IQS7219_REG_GRP_PXS] = "cycle",
-	[IQS7219_REG_GRP_CHAN_0] = "channel",
-	[IQS7219_REG_GRP_CHAN_1] = "channel",
+static const char * const iqs7219_reg_grp_names[IQS7219_NUM_REG_GRPS] = {
+	[IQS7219_REG_GRP_ATI] = "ati-%d",
+	[IQS7219_REG_GRP_PXS] = "cycle-%d",
+	[IQS7219_REG_GRP_CAP_PROJ] = "sense-mode-proj",
+	[IQS7219_REG_GRP_CAP_SELF] = "sense-mode-self",
+	[IQS7219_REG_GRP_CHAN_0] = "channel-0",
+	[IQS7219_REG_GRP_CHAN_1] = "channel-1",
 };
 
 struct iqs7219_reg_grp_desc {
@@ -190,11 +184,15 @@ static const struct iqs7219_reg_grp_desc iqs7219_reg_grps[] = {
 		.num_row = IQS7219_NUM_CYCLES,
 		.num_col = IQS7219_NUM_COLS_PXS,
 	},
-	[IQS7219_REG_GRP_CAP] = {
+	[IQS7219_REG_GRP_CAP_PROJ] = {
 		.base = 0x8C,
-		.reg_key = IQS7219_REG_KEY_CAP,
+		.reg_key = IQS7219_REG_KEY_CAP_PROJ,
 		.num_row = 1,
 		.num_col = 1,
+	},
+	[IQS7219_REG_GRP_CAP_SELF] = {
+		.reg_key = IQS7219_REG_KEY_CAP_SELF,
+		.num_row = 1,
 	},
 	[IQS7219_REG_GRP_EVENT_0] = {
 		.base = 0x90,
@@ -384,8 +382,30 @@ static const struct iqs7219_prop_desc iqs7219_props[] = {
 		.label = "sensing mode",
 	},
 	{
+		.name = "azoteq,vref-half",
+		.reg_key = IQS7219_REG_KEY_CAP_SELF,
+		.reg_offset = 0,
+		.reg_shift = 14,
+		.reg_width = 1,
+	},
+	{
+		.name = "azoteq,samp-cap-double",
+		.reg_key = IQS7219_REG_KEY_CAP_SELF,
+		.reg_offset = 0,
+		.reg_shift = 12,
+		.reg_width = 1,
+	},
+	{
+		.name = "azoteq,max-counts",
+		.reg_key = IQS7219_REG_KEY_CAP_SELF,
+		.reg_offset = 0,
+		.reg_shift = 8,
+		.reg_width = 2,
+		.label = "maximum counts",
+	},
+	{
 		.name = "azoteq,proj-bias",
-		.reg_key = IQS7219_REG_KEY_CAP,
+		.reg_key = IQS7219_REG_KEY_CAP_PROJ,
 		.reg_offset = 0,
 		.reg_shift = 2,
 		.reg_width = 2,
@@ -645,7 +665,8 @@ static u16 *iqs7219_setup(struct iqs7219_private *iqs7219,
 	case IQS7219_REG_GRP_PXS:
 		return iqs7219->pxs_setup[row];
 
-	case IQS7219_REG_GRP_CAP:
+	case IQS7219_REG_GRP_CAP_PROJ:
+	case IQS7219_REG_GRP_CAP_SELF:
 		return &iqs7219->cap_setup;
 
 	case IQS7219_REG_GRP_EVENT_0:
@@ -990,6 +1011,9 @@ static int iqs7219_dev_init(struct iqs7219_private *iqs7219, int dir)
 		__le16 *val_buf;
 		u16 *val;
 
+		if (!num_val)
+			continue;
+
 		val = iqs7219_setup(iqs7219, i, 0);
 		if (!val)
 			continue;
@@ -1036,55 +1060,16 @@ static int iqs7219_dev_init(struct iqs7219_private *iqs7219, int dir)
 }
 
 static int iqs7219_parse_props(struct iqs7219_private *iqs7219,
-			       struct fwnode_handle **child_node,
-			       int child_index,
+			       struct fwnode_handle *reg_grp_node,
+			       int reg_grp_index,
 			       enum iqs7219_reg_grp_id reg_grp)
 {
-	u16 *setup = iqs7219_setup(iqs7219, reg_grp, child_index);
+	u16 *setup = iqs7219_setup(iqs7219, reg_grp, reg_grp_index);
 	struct i2c_client *client = iqs7219->client;
-	struct fwnode_handle *reg_grp_node;
-	char reg_grp_name[16];
 	int i;
 
-	switch (reg_grp) {
-	case IQS7219_REG_GRP_ATI:
-	case IQS7219_REG_GRP_PXS:
-	case IQS7219_REG_GRP_EVENT_0:
-	case IQS7219_REG_GRP_EVENT_1:
-	case IQS7219_REG_GRP_CHAN_0:
-	case IQS7219_REG_GRP_CHAN_1:
-		/*
-		 * These groups derive a child node and return it to the caller
-		 * for additional group-specific processing. In some cases, the
-		 * child node may have already been derived.
-		 */
-		reg_grp_node = *child_node;
-		if (reg_grp_node)
-			break;
-
-		snprintf(reg_grp_name, sizeof(reg_grp_name), "%s-%d",
-			 iqs7219_reg_grp_names[reg_grp], child_index);
-
-		reg_grp_node = device_get_named_child_node(&client->dev,
-							   reg_grp_name);
-		if (!reg_grp_node)
-			return 0;
-
-		*child_node = reg_grp_node;
-		break;
-
-	case IQS7219_REG_GRP_SYS:
-	case IQS7219_REG_GRP_CAP:
-		/*
-		 * These groups are not organized beneath a child node, nor are
-		 * they subject to any additional processing by the caller.
-		 */
-		reg_grp_node = dev_fwnode(&client->dev);
-		break;
-
-	default:
-		return -EINVAL;
-	}
+	if (!setup)
+		return 0;
 
 	for (i = 0; i < ARRAY_SIZE(iqs7219_props); i++) {
 		const char *name = iqs7219_props[i].name;
@@ -1099,6 +1084,16 @@ static int iqs7219_parse_props(struct iqs7219_private *iqs7219,
 		const char *label = iqs7219_props[i].label ? : name;
 		unsigned int val;
 		int error;
+
+		/*
+		 * Properties specific to self-capacitive mode apply to mutual
+		 * (projected) capacitive mode as well.
+		 */
+		if (reg_key == IQS7219_REG_KEY_CAP_SELF &&
+		    reg_grp == IQS7219_REG_GRP_CAP_PROJ) {
+			reg_key = IQS7219_REG_KEY_CAP_PROJ;
+			reg_shift -= 8;
+		}
 
 		if (reg_key != iqs7219_reg_grps[reg_grp].reg_key)
 			continue;
@@ -1154,21 +1149,73 @@ static int iqs7219_parse_props(struct iqs7219_private *iqs7219,
 	return 0;
 }
 
-static int iqs7219_parse_chan(struct iqs7219_private *iqs7219, int chan_index)
+static int iqs7219_parse_event(struct iqs7219_private *iqs7219,
+			       struct fwnode_handle *event_node,
+			       int event_index, int chan_index)
 {
 	struct i2c_client *client = iqs7219->client;
-	struct fwnode_handle *chan_node = NULL;
 	unsigned int val;
-	int error, i, j;
+	int error, i;
+	u16 *event_setup = iqs7219->event_setup[chan_index][event_index];
 	u16 *chan_setup = iqs7219->chan_setup[chan_index];
 
-	error = iqs7219_parse_props(iqs7219, &chan_node, chan_index,
-				    IQS7219_REG_GRP_CHAN_0 + chan_index);
+	error = iqs7219_parse_props(iqs7219, event_node, event_index,
+				    IQS7219_REG_GRP_EVENT_0 + chan_index);
 	if (error)
 		return error;
 
-	if (!chan_node)
+	if (!fwnode_property_present(event_node, "azoteq,trigger-disable"))
+		iqs7219->event_mask[chan_index] |= BIT(event_index);
+
+	chan_setup[0] &= ~BIT(event_index + 3);
+	if (fwnode_property_present(event_node, "azoteq,lta-track"))
+		chan_setup[0] |= BIT(event_index + 3);
+
+	error = fwnode_property_read_u32(event_node, "azoteq,gpio-select",
+					 &val);
+	if (error == -EINVAL)
 		return 0;
+
+	if (error) {
+		dev_err(&client->dev, "Failed to read %s GPIO selection: %d\n",
+			fwnode_get_name(event_node), error);
+		return error;
+	}
+
+	for (i = 0; i < ARRAY_SIZE(iqs7219_gpios); i++)
+		if (val == iqs7219_gpios[i])
+			break;
+
+	if (i == ARRAY_SIZE(iqs7219_gpios)) {
+		dev_err(&client->dev, "Invalid %s GPIO selection: %u\n",
+			fwnode_get_name(event_node), val);
+		return -EINVAL;
+	}
+
+	event_setup[4] |= BIT(val);
+
+	if (fwnode_property_present(event_node, "drive-open-drain"))
+		event_setup[4] |= IQS7219_GPIO_OPEN_DRAIN;
+	else if (fwnode_property_present(event_node, "azoteq,invert-enable"))
+		event_setup[4] |= IQS7219_GPIO_ACTIVE_HIGH;
+
+	/*
+	 * GPIOs 1, 2 and 5 are shared with the SDA, SCL and RDY pins, respec-
+	 * tively. Selecting any GPIO requires the device to be used in stand-
+	 * alone mode, during which it cannot communicate over I2C.
+	 */
+	iqs7219->intf_mode = IQS7219_SYS_SETUP_INTF_MODE_STAND;
+
+	return 0;
+}
+
+static int iqs7219_parse_chan(struct iqs7219_private *iqs7219,
+			      struct fwnode_handle *chan_node, int chan_index)
+{
+	struct i2c_client *client = iqs7219->client;
+	unsigned int val;
+	int error, i;
+	u16 *chan_setup = iqs7219->chan_setup[chan_index];
 
 	if (fwnode_property_present(chan_node, "azoteq,rx-enable")) {
 		unsigned int pins[4];
@@ -1265,57 +1312,10 @@ static int iqs7219_parse_chan(struct iqs7219_private *iqs7219, int chan_index)
 		if (!event_node)
 			continue;
 
-		error = iqs7219_parse_props(iqs7219, &event_node, i,
-					    IQS7219_REG_GRP_EVENT_0 + chan_index);
+		error = iqs7219_parse_event(iqs7219, event_node, i, chan_index);
+		fwnode_handle_put(event_node);
 		if (error)
 			return error;
-
-		if (!fwnode_property_present(event_node,
-					     "azoteq,trigger-disable"))
-			iqs7219->event_mask[chan_index] |= BIT(i);
-
-		chan_setup[0] &= ~BIT(i + 3);
-		if (fwnode_property_present(event_node, "azoteq,lta-track"))
-			chan_setup[0] |= BIT(i + 3);
-
-		if (!fwnode_property_present(event_node, "azoteq,gpio-select"))
-			continue;
-
-		error = fwnode_property_read_u32(event_node,
-						 "azoteq,gpio-select", &val);
-		if (error) {
-			dev_err(&client->dev,
-				"Failed to read %s GPIO selection: %d\n",
-				fwnode_get_name(event_node), error);
-			return error;
-		}
-
-		for (j = 0; j < ARRAY_SIZE(iqs7219_gpios); j++)
-			if (val == iqs7219_gpios[j])
-				break;
-
-		if (j == ARRAY_SIZE(iqs7219_gpios)) {
-			dev_err(&client->dev,
-				"Invalid %s GPIO selection: %u\n",
-				fwnode_get_name(event_node), val);
-			return -EINVAL;
-		}
-
-		event_setup[4] |= BIT(val);
-
-		if (fwnode_property_present(event_node, "drive-open-drain"))
-			event_setup[4] |= IQS7219_GPIO_OPEN_DRAIN;
-		else if (fwnode_property_present(event_node,
-						 "azoteq,invert-enable"))
-			event_setup[4] |= IQS7219_GPIO_ACTIVE_HIGH;
-
-		/*
-		 * GPIOs 1, 2 and 5 are shared with the SDA, SCL and RDY pins,
-		 * respectively. Selecting any GPIO requires the device to be
-		 * placed in stand-alone mode, during which it cannot communi-
-		 * cate over I2C.
-		 */
-		iqs7219->intf_mode = IQS7219_SYS_SETUP_INTF_MODE_STAND;
 	}
 
 	if (!fwnode_property_present(chan_node, "azoteq,scan-mux"))
@@ -1340,82 +1340,66 @@ static int iqs7219_parse_chan(struct iqs7219_private *iqs7219, int chan_index)
 	return 0;
 }
 
+static int iqs7219_parse_reg_grp(struct iqs7219_private *iqs7219,
+				 enum iqs7219_reg_grp_id reg_grp,
+				 int reg_grp_index)
+{
+	struct i2c_client *client = iqs7219->client;
+	struct fwnode_handle *reg_grp_node;
+	int error;
+
+	/*
+	 * Event nodes are children of channel nodes and need not be parsed as
+	 * part of this function. Instead, they are parsed as part of the call
+	 * to iqs7219_parse_chan().
+	 */
+	if (iqs7219_reg_grps[reg_grp].reg_key == IQS7219_REG_KEY_EVENT)
+		return 0;
+
+	if (iqs7219_reg_grp_names[reg_grp]) {
+		char reg_grp_name[16];
+
+		snprintf(reg_grp_name, sizeof(reg_grp_name),
+			 iqs7219_reg_grp_names[reg_grp], reg_grp_index);
+
+		reg_grp_node = device_get_named_child_node(&client->dev,
+							   reg_grp_name);
+	} else {
+		reg_grp_node = fwnode_handle_get(dev_fwnode(&client->dev));
+	}
+
+	if (!reg_grp_node)
+		return 0;
+
+	error = iqs7219_parse_props(iqs7219, reg_grp_node, reg_grp_index,
+				    reg_grp);
+
+	if (!error && iqs7219_reg_grps[reg_grp].reg_key == IQS7219_REG_KEY_CHAN)
+		error = iqs7219_parse_chan(iqs7219, reg_grp_node,
+					   reg_grp - IQS7219_REG_GRP_CHAN_0);
+
+	fwnode_handle_put(reg_grp_node);
+
+	return error;
+}
+
 static int iqs7219_parse_all(struct iqs7219_private *iqs7219)
 {
 	struct i2c_client *client = iqs7219->client;
-	int error, i;
+	int error, i, j;
 
 	if (!device_property_present(&client->dev, "azoteq,streaming-comms"))
 		iqs7219->intf_mode = IQS7219_SYS_SETUP_INTF_MODE_EVENT;
 
-	for (i = 0; i < IQS7219_NUM_CYCLES; i++) {
-		struct fwnode_handle *cycle_node = NULL;
-
-		error = iqs7219_parse_props(iqs7219, &cycle_node, i,
-					    IQS7219_REG_GRP_PXS);
-		if (error)
-			return error;
-	}
-
-	for (i = 0; i < ARRAY_SIZE(iqs7219_sense_modes); i++) {
-		u16 *cap_setup = &iqs7219->cap_setup;
-		struct fwnode_handle *cap_node;
-		unsigned int val;
-
-		cap_node = device_get_named_child_node(&client->dev,
-						       iqs7219_sense_modes[i]);
-		if (!cap_node)
-			continue;
-
-		*cap_setup &= ~(IQS7219_CAP_SETUP_VREF_HALF << i * 8);
-		if (fwnode_property_present(cap_node, "azoteq,vref-half"))
-			*cap_setup |= (IQS7219_CAP_SETUP_VREF_HALF << i * 8);
-
-		*cap_setup &= ~(IQS7219_CAP_SETUP_SAMP_DOUBLE << i * 8);
-		if (fwnode_property_present(cap_node, "azoteq,samp-cap-double"))
-			*cap_setup |= (IQS7219_CAP_SETUP_SAMP_DOUBLE << i * 8);
-
-		if (!fwnode_property_present(cap_node, "azoteq,max-counts"))
-			continue;
-
-		error = fwnode_property_read_u32(cap_node, "azoteq,max-counts",
-						 &val);
-		if (error) {
-			dev_err(&client->dev,
-				"Failed to read %s maximum counts: %d\n",
-				fwnode_get_name(cap_node), error);
-			return error;
+	for (i = 0; i < IQS7219_NUM_REG_GRPS; i++) {
+		for (j = 0; j < iqs7219_reg_grps[i].num_row; j++) {
+			error = iqs7219_parse_reg_grp(iqs7219, i, j);
+			if (error)
+				return error;
 		}
-
-		if (val > IQS7219_CAP_SETUP_COUNTS_MAX) {
-			dev_err(&client->dev,
-				"Invalid %s maximum counts: %u\n",
-				fwnode_get_name(cap_node), val);
-			return -EINVAL;
-		}
-
-		*cap_setup &= ~(IQS7219_CAP_SETUP_COUNTS_MASK << i * 8);
-		*cap_setup |= (val << i * 8);
 	}
 
-	error = iqs7219_parse_props(iqs7219, NULL, 0, IQS7219_REG_GRP_CAP);
-	if (error)
-		return error;
-
-	for (i = 0; i < IQS7219_NUM_CHAN; i++) {
-		struct fwnode_handle *ati_node = NULL;
-
-		error = iqs7219_parse_props(iqs7219, &ati_node, i,
-					    IQS7219_REG_GRP_ATI);
-		if (error)
-			return error;
-
-		error = iqs7219_parse_chan(iqs7219, i);
-		if (error)
-			return error;
-	}
-
-	return iqs7219_parse_props(iqs7219, NULL, 0, IQS7219_REG_GRP_SYS);
+	return 0;
 }
 
 static int iqs7219_report_sync(struct iio_dev *indio_dev,
