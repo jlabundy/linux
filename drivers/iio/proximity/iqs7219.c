@@ -701,7 +701,7 @@ static int iqs7219_hard_reset(struct iqs7219_private *iqs7219)
 
 static int iqs7219_force_comms(struct iqs7219_private *iqs7219)
 {
-	u8 msg_buf[] = { 0xFF, 0x00, };
+	u8 msg_buf[] = { 0xFF, };
 	int ret;
 
 	/*
