@@ -111,17 +111,6 @@ properties:
     maximum: 3000
     description: Specifies the report rate (in ms) during ultra-low-power mode.
 
-  azoteq,proj-bias:
-    $ref: /schemas/types.yaml#/definitions/uint32
-    enum: [0, 1, 2, 3]
-    description: |
-      Specifies the bias current applied during mutual (projected) capacitive
-      sensing as follows:
-      0: 2 uA
-      1: 5 uA
-      2: 7 uA
-      3: 10 uA
-
 patternProperties:
   "^cycle-[0-1]$":
     type: object
@@ -146,8 +135,8 @@ patternProperties:
   "^sense-mode-(self|proj)$":
     type: object
     description:
-      Represents all properties that define self or mutual (projected) sensing
-      modes.
+      Represents all properties that define self or mutual (projected)
+      capacitive sensing modes.
 
     properties:
       azoteq,vref-half:
@@ -168,6 +157,17 @@ patternProperties:
           1: 2047
           2: 4095
           3: 16384
+
+      azoteq,proj-bias:
+        $ref: /schemas/types.yaml#/definitions/uint32
+        enum: [0, 1, 2, 3]
+        description: |
+          Specifies the bias current applied during mutual (projected)
+          capacitive sensing as follows:
+          0: 2 uA
+          1: 5 uA
+          2: 7 uA
+          3: 10 uA
 
     additionalProperties: false
 
