@@ -91,7 +91,9 @@ properties:
 patternProperties:
   "^hall-switch-(north|south)$":
     type: object
-    $ref: input.yaml#
+    allOf:
+      - $ref: input.yaml#
+      - $ref: azoteq,common.yaml#
     description:
       Represents north/south-field Hall-effect sensor touch or proximity
       events. Note that north/south-field orientation is reversed on the
@@ -99,13 +101,7 @@ patternProperties:
 
     properties:
       linux,code: true
-
-      azoteq,use-prox:
-        $ref: /schemas/types.yaml#/definitions/flag
-        description:
-          If present, specifies that Hall-effect sensor reporting should
-          use the device's wide-range proximity threshold instead of its
-          close-range touch threshold (default).
+      azoteq,use-prox: true
 
     required:
       - linux,code
