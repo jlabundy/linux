@@ -1,0 +1,1207 @@
+# SPDX-License-Identifier: (GPL-2.0-only OR BSD-2-Clause)
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/input/touchscreen/azoteq,iqs9150.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: Azoteq IQS9150/9151 Trackpad Controller
+
+maintainers:
+  - Jeff LaBundy <jeff@labundy.com>
+
+description: |
+  The Azoteq IQS9150 and IQS9151 trackpad controllers employ projected-
+  capacitance sensing and can track seven contacts.
+
+  Link to datasheets: https://www.azoteq.com/
+
+properties:
+  compatible:
+    enum:
+      - azoteq,iqs9150
+      - azoteq,iqs9151
+
+  reg:
+    maxItems: 1
+
+  irq-gpios:
+    maxItems: 1
+    description:
+      Specifies the GPIO connected to the device's active-low RDY output.
+
+  reset-gpios:
+    maxItems: 1
+    description:
+      Specifies the GPIO connected to the device's active-low MCLR input. The
+      device is temporarily held in hardware reset prior to initialization if
+      this property is present.
+
+  azoteq,forced-comms:
+    type: boolean
+    description:
+      Enables forced communication; to be used with host adapters that cannot
+      tolerate clock stretching.
+
+  azoteq,rate-active-ms:
+    minimum: 0
+    maximum: 65535
+    description: Specifies the report rate (in ms) during active mode.
+
+  azoteq,rate-touch-ms:
+    minimum: 0
+    maximum: 65535
+    description: Specifies the report rate (in ms) during idle-touch mode.
+
+  azoteq,rate-idle-ms:
+    minimum: 0
+    maximum: 65535
+    description: Specifies the report rate (in ms) during idle mode.
+
+  azoteq,rate-lp1-ms:
+    minimum: 0
+    maximum: 65535
+    description: Specifies the report rate (in ms) during low-power mode 1.
+
+  azoteq,rate-lp2-ms:
+    minimum: 0
+    maximum: 65535
+    description: Specifies the report rate (in ms) during low-power mode 2.
+
+  azoteq,timeout-press-ms:
+    multipleOf: 1000
+    minimum: 0
+    maximum: 65535000
+    description:
+      Specifies the length of time (in ms) to wait for an event before moving
+      from active mode to idle-touch mode while a contact remains stationary.
+
+  azoteq,timeout-touch-ms:
+    multipleOf: 1000
+    minimum: 0
+    maximum: 65535000
+    description:
+      Specifies the length of time (in ms) to wait for an event before moving
+      from idle-touch mode to idle mode.
+
+  azoteq,timeout-idle-ms:
+    multipleOf: 1000
+    minimum: 0
+    maximum: 65535000
+    description:
+      Specifies the length of time (in ms) to wait for an event before moving
+      from idle mode to low-power mode 1.
+
+  azoteq,timeout-lp1-ms:
+    multipleOf: 1000
+    minimum: 0
+    maximum: 65535000
+    description:
+      Specifies the length of time (in ms) to wait for an event before moving
+      from low-power mode 1 to low-power mode 2.
+
+  azoteq,timeout-release-ms:
+    minimum: 0
+    maximum: 65535
+    description:
+      Specifies the length of time (in ms) to wait for an event before moving
+      from active mode to idle mode after a contact is released.
+
+  azoteq,timeout-ati-ms:
+    multipleOf: 1000
+    minimum: 0
+    maximum: 60000
+    description:
+      Specifies the delay (in ms) before the automatic tuning implementation
+      (ATI) is retried in the event it fails to complete.
+
+  azoteq,rate-ref-ms:
+    multipleOf: 1000
+    minimum: 0
+    maximum: 60000
+    description:
+      Specifies the rate (in ms) at which the trackpad reference values
+      are updated during low-power modes 1 and 2.
+
+  azoteq,timeout-comms-ms:
+    minimum: 0
+    maximum: 65535
+    description:
+      Specifies the delay (in ms) before a communication window is closed.
+
+  azoteq,timeout-snap-ms:
+    multipleOf: 1000
+    minimum: 0
+    maximum: 65535000
+    description:
+      Specifies the length of time (in ms) to wait for a snap to be released
+      before the trackpad is reseeded.
+
+  azoteq,fosc-trim:
+    $ref: /schemas/types.yaml#/definitions/uint32
+    enum: [0, 1, 2, 3]
+    description: |
+      Specifies the device's core clock frequency trim as follows:
+      0: Nominal
+      1: -10% (14 MHz) or -20% (20/24 MHz)
+      2: -20% (14 MHz) or -30% (20/24 MHz)
+      3: -30% (14 MHz) or -40% (20/24 MHz)
+
+  azoteq,fosc-freq:
+    $ref: /schemas/types.yaml#/definitions/uint32
+    enum: [0, 1, 2]
+    description: |
+      Specifies the device's core clock frequency as follows:
+      0: 14 MHz
+      1: 20 MHz
+      2: 24 MHz
+
+  trackpad:
+    type: object
+    description: Represents all channels associated with the trackpad.
+
+    properties:
+      azoteq,rx-enable:
+        $ref: /schemas/types.yaml#/definitions/uint32-array
+        minItems: 1
+        maxItems: 26
+        items:
+          minimum: 0
+          maximum: 25
+        description:
+          Specifies the order of the RX pin(s) associated with the trackpad.
+
+      azoteq,tx-enable:
+        $ref: /schemas/types.yaml#/definitions/uint32-array
+        minItems: 1
+        maxItems: 22
+        items:
+          minimum: 0
+          maximum: 45
+        description:
+          Specifies the order of the TX pin(s) associated with the trackpad.
+
+      azoteq,ati-frac-mult-fine:
+        $ref: /schemas/types.yaml#/definitions/uint32
+        minimum: 0
+        maximum: 3
+        description: Specifies the trackpad's ATI fine fractional multiplier.
+
+      azoteq,ati-frac-div-fine:
+        $ref: /schemas/types.yaml#/definitions/uint32
+        minimum: 0
+        maximum: 31
+        description: Specifies the trackpad's ATI fine fractional divider.
+
+      azoteq,ati-frac-mult-coarse:
+        $ref: /schemas/types.yaml#/definitions/uint32
+        minimum: 0
+        maximum: 15
+        description: Specifies the trackpad's ATI coarse fractional multiplier.
+
+      azoteq,ati-frac-div-coarse:
+        $ref: /schemas/types.yaml#/definitions/uint32
+        minimum: 0
+        maximum: 31
+        description: Specifies the trackpad's ATI coarse fractional divider.
+
+      azoteq,ati-target:
+        $ref: /schemas/types.yaml#/definitions/uint32
+        minimum: 0
+        maximum: 65535
+        description: Specifies the trackpad's ATI target.
+
+      azoteq,ati-delta-neg:
+        $ref: /schemas/types.yaml#/definitions/uint32
+        minimum: 0
+        maximum: 65535
+        description: Specifies the trackpad's ATI negative delta threshold.
+
+      azoteq,ati-delta-pos:
+        $ref: /schemas/types.yaml#/definitions/uint32
+        minimum: 0
+        maximum: 65535
+        description: Specifies the trackpad's ATI positive delta threshold.
+
+      azoteq,ati-drift:
+        $ref: /schemas/types.yaml#/definitions/uint32
+        minimum: 0
+        maximum: 255
+        description: Specifies the trackpad's ATI drift limit.
+
+      azoteq,touch-enter:
+        $ref: /schemas/types.yaml#/definitions/uint32
+        minimum: 0
+        maximum: 255
+        description: Specifies the trackpad's touch entrance factor.
+
+      azoteq,touch-exit:
+        $ref: /schemas/types.yaml#/definitions/uint32
+        minimum: 0
+        maximum: 255
+        description: Specifies the trackpad's touch exit factor.
+
+      azoteq,snap-enter:
+        $ref: /schemas/types.yaml#/definitions/uint32
+        minimum: 0
+        maximum: 255
+        description: Specifies the trackpad's snap entrance factor.
+
+      azoteq,snap-exit:
+        $ref: /schemas/types.yaml#/definitions/uint32
+        minimum: 0
+        maximum: 255
+        description: Specifies the trackpad's snap exit factor.
+
+      azoteq,conv-frac:
+        $ref: /schemas/types.yaml#/definitions/uint32
+        minimum: 0
+        maximum: 255
+        description: Specifies the trackpad's conversion frequency fraction.
+
+      azoteq,conv-period-1:
+        $ref: /schemas/types.yaml#/definitions/uint32
+        minimum: 0
+        maximum: 255
+        description: Specifies the trackpad's conversion period 1.
+
+      azoteq,conv-period-2:
+        $ref: /schemas/types.yaml#/definitions/uint32
+        minimum: 0
+        maximum: 255
+        description: Specifies the trackpad's conversion period 2.
+
+      azoteq,delay-cycles:
+        $ref: /schemas/types.yaml#/definitions/uint32
+        enum: [0, 1, 2, 3]
+        description: |
+          Specifies the initial cycle delay as follows:
+          0: 16
+          1: 32
+          2: 64
+          3: 256
+
+      azoteq,proj-bias:
+        $ref: /schemas/types.yaml#/definitions/uint32
+        enum: [0, 1, 2, 3, 4, 5, 6, 7]
+        description: |
+          Specifies the bias current applied during mutual (projected)
+          capacitive sensing as follows:
+          0: 5 uA
+          1: 10 uA
+          2: 15 uA
+          3: 20 uA
+          4: 15 uA
+          5: 20 uA
+          6: 25 uA
+          7: 30 uA
+
+      azoteq,max-counts:
+        $ref: /schemas/types.yaml#/definitions/uint32
+        enum: [0, 1, 2, 3, 4]
+        description: |
+          Specifies the maximum number of conversion periods (counts) that can
+          be reported as follows:
+          0: 383
+          1: 511
+          2: 767
+          3: 1023
+          4: 2047
+
+      azoteq,samp-cap-discharge:
+        $ref: /schemas/types.yaml#/definitions/uint32
+        enum: [0, 1]
+        description: |
+          Specifies the sample capacitor discharge voltage as follows:
+          0: 0.0 V
+          1: 0.5 V
+
+      azoteq,rf-filter:
+        $ref: /schemas/types.yaml#/definitions/uint32
+        enum: [0, 1]
+        description: |
+          Specifies the RF filter enable state as follows:
+          0: Disabled
+          1: Enabled
+
+      azoteq,nm-static-out:
+        $ref: /schemas/types.yaml#/definitions/uint32
+        enum: [0, 1]
+        description: |
+          Specifies the NM static output enable state as follows:
+          0: Disabled
+          1: Enabled
+
+      azoteq,nm-static-in:
+        $ref: /schemas/types.yaml#/definitions/uint32
+        enum: [0, 1]
+        description: |
+          Specifies the NM static input enable state as follows:
+          0: Disabled
+          1: Enabled
+
+      azoteq,proj-offset:
+        $ref: /schemas/types.yaml#/definitions/uint32
+        enum: [0, 1, 2, 3, 4, 5, 6, 7, 9, 10, 11, 12, 13, 14, 15]
+        description: |
+          Specifies the offset voltage applied during mutual (projected)
+          capacitive sensing as follows:
+          0: 0 mV
+          1: -2 mV
+          2: -4 mV
+          3: -6 mV
+          4: -8 mV
+          5: -10 mV
+          6: -12 mV
+          7: -14 mV
+          9: +2 mV
+          10: +4 mV
+          11: +6 mV
+          12: +8 mV
+          13: +10 mV
+          14: +12 mV
+          15: +14 mV
+
+      azoteq,area-filter:
+        $ref: /schemas/types.yaml#/definitions/uint32
+        enum: [0, 1]
+        description: |
+          Specifies the area filter disable state as follows:
+          0: Enabled
+          1: Disabled
+
+      azoteq,jitter-filter:
+        $ref: /schemas/types.yaml#/definitions/uint32
+        enum: [0, 1]
+        description: |
+          Specifies the jitter filter enable state as follows:
+          0: Disabled
+          1: Enabled
+
+      azoteq,iir-static:
+        $ref: /schemas/types.yaml#/definitions/uint32
+        enum: [0, 1]
+        description: |
+          Specifies the IIR filtering method as follows:
+          0: Dynamic
+          1: Static
+
+      azoteq,iir-filter:
+        $ref: /schemas/types.yaml#/definitions/uint32
+        enum: [0, 1]
+        description: |
+          Specifies the IIR filter enable state as follows:
+          0: Disabled
+          1: Enabled
+
+      azoteq,num-contacts:
+        $ref: /schemas/types.yaml#/definitions/uint32
+        minimum: 0
+        maximum: 7
+        description: Specifies the number of contacts reported by the trackpad.
+
+      azoteq,bottom-speed:
+        $ref: /schemas/types.yaml#/definitions/uint32
+        minimum: 0
+        maximum: 65535
+        description:
+          Specifies the speed (in coordinates traveled per conversion) after
+          which coordinate filtering is linearly reduced.
+
+      azoteq,top-speed:
+        $ref: /schemas/types.yaml#/definitions/uint32
+        minimum: 0
+        maximum: 65535
+        description:
+          Specifies the speed (in coordinates traveled per conversion) after
+          which coordinate filtering is no longer applied.
+
+      azoteq,bottom-beta:
+        $ref: /schemas/types.yaml#/definitions/uint32
+        minimum: 0
+        maximum: 255
+        description:
+          Specifies the coordinate filter damping factor to be applied
+          while the speed of movement is below that which is specified
+          by azoteq,bottom-speed.
+
+      azoteq,static-beta:
+        $ref: /schemas/types.yaml#/definitions/uint32
+        minimum: 0
+        maximum: 255
+        description:
+          Specifies the coordinate filter damping factor to be applied
+          during static filtering.
+
+      azoteq,thresh:
+        $ref: /schemas/types.yaml#/definitions/uint32
+        minimum: 0
+        maximum: 255
+        description: Specifies the trackpad's stationary touch threshold.
+
+      azoteq,contact-split:
+        $ref: /schemas/types.yaml#/definitions/uint32
+        minimum: 0
+        maximum: 255
+        description: Specifies the contact (finger) split factor.
+
+      azoteq,trim-x:
+        $ref: /schemas/types.yaml#/definitions/uint32
+        minimum: 0
+        maximum: 255
+        description: Specifies the horizontal trim width.
+
+      azoteq,trim-y:
+        $ref: /schemas/types.yaml#/definitions/uint32
+        minimum: 0
+        maximum: 255
+        description: Specifies the vertical trim height.
+
+      azoteq,jitter-delta:
+        $ref: /schemas/types.yaml#/definitions/uint32
+        minimum: 0
+        maximum: 255
+        description: Specifies the jitter filter delta threshold.
+
+      azoteq,contact-confidence:
+        $ref: /schemas/types.yaml#/definitions/uint32
+        minimum: 0
+        maximum: 255
+        description: Specifies the contact (finger) confidence threshold.
+
+      azoteq,channel-ignore:
+        $ref: /schemas/types.yaml#/definitions/uint32-array
+        minItems: 1
+        maxItems: 506
+        items:
+          minimum: 0
+          maximum: 505
+        description: Specifies the channel(s) to be excluded from the trackpad.
+
+      azoteq,snap-select:
+        $ref: /schemas/types.yaml#/definitions/uint32-array
+        minItems: 1
+        maxItems: 506
+        items:
+          minimum: 0
+          maximum: 505
+        description:
+          Specifies the channel(s) for which the snap function is enabled.
+
+      azoteq,trim-touch:
+        $ref: /schemas/types.yaml#/definitions/uint32-array
+        minItems: 1
+        maxItems: 506
+        items:
+          minimum: 0
+          maximum: 255
+        description:
+          Specifies each channel's touch trim adjustment in two's complement
+          format.
+
+    dependencies:
+      azoteq,rx-enable: ["azoteq,tx-enable"]
+      azoteq,tx-enable: ["azoteq,rx-enable"]
+      azoteq,channel-ignore: ["azoteq,rx-enable"]
+      azoteq,snap-select: ["azoteq,rx-enable"]
+      azoteq,trim-touch: ["azoteq,rx-enable"]
+
+    additionalProperties: false
+
+  alp:
+    type: object
+    description: Represents the alternate low-power channel (ALP).
+
+    properties:
+      azoteq,rx-enable:
+        $ref: /schemas/types.yaml#/definitions/uint32-array
+        minItems: 1
+        maxItems: 26
+        items:
+          minimum: 0
+          maximum: 25
+        description:
+          Specifies the RX pin(s) associated with the ALP in no particular
+          order.
+
+      azoteq,tx-enable:
+        $ref: /schemas/types.yaml#/definitions/uint32-array
+        minItems: 1
+        maxItems: 22
+        items:
+          minimum: 0
+          maximum: 45
+        description:
+          Specifies the TX pin(s) associated with the ALP in no particular
+          order.
+
+      azoteq,ati-target:
+        $ref: /schemas/types.yaml#/definitions/uint32
+        minimum: 0
+        maximum: 65535
+        description: Specifies the ALP's ATI target.
+
+      azoteq,ati-base:
+        $ref: /schemas/types.yaml#/definitions/uint32
+        minimum: 0
+        maximum: 65535
+        description: Specifies the ALP's ATI base.
+
+      azoteq,ati-drift:
+        $ref: /schemas/types.yaml#/definitions/uint32
+        minimum: 0
+        maximum: 255
+        description: Specifies the ALP's ATI drift limit.
+
+      azoteq,auto-prox-lp2:
+        $ref: /schemas/types.yaml#/definitions/uint32
+        enum: [0, 1]
+        description: |
+          Specifies the low-power mode 2 auto prox enable state as follows:
+          0: Disabled
+          1: Enabled
+
+      azoteq,auto-prox-lp1:
+        $ref: /schemas/types.yaml#/definitions/uint32
+        enum: [0, 1]
+        description: |
+          Specifies the low-power mode 1 auto prox enable state as follows:
+          0: Disabled
+          1: Enabled
+
+      azoteq,auto-prox-cycles-lp2:
+        $ref: /schemas/types.yaml#/definitions/uint32
+        enum: [0, 1, 2, 3]
+        description: |
+          Specifies the low-power mode 2 auto prox number of cycles as follows:
+          0: 16
+          1: 32
+          2: 64
+          3: 256
+
+      azoteq,auto-prox-cycles-lp1:
+        $ref: /schemas/types.yaml#/definitions/uint32
+        enum: [0, 1, 2, 3]
+        description: |
+          Specifies the low-power mode 1 auto prox number of cycles as follows:
+          0: 16
+          1: 32
+          2: 64
+          3: 256
+
+      azoteq,count-filter:
+        $ref: /schemas/types.yaml#/definitions/uint32
+        enum: [0, 1]
+        description: |
+          Specifies the count filter enable state as follows:
+          0: Disabled
+          1: Enabled
+
+      azoteq,sense-mode:
+        $ref: /schemas/types.yaml#/definitions/uint32
+        enum: [0, 1]
+        description: |
+          Specifies the ALP's sensing mode as follows:
+          0: Self capacitive
+          1: Mutual capacitive
+
+      azoteq,tx-shield:
+        $ref: /schemas/types.yaml#/definitions/uint32
+        enum: [0, 1]
+        description: |
+          Specifies the TX pin shield state as follows:
+          0: Disabled
+          1: Enabled
+
+      azoteq,thresh:
+        $ref: /schemas/types.yaml#/definitions/uint32
+        minimum: 0
+        maximum: 255
+        description: Specifies the ALP's proximity or touch threshold.
+
+      azoteq,auto-prox-delta:
+        $ref: /schemas/types.yaml#/definitions/uint32
+        minimum: 0
+        maximum: 255
+        description: Specifies the ALP's auto prox delta threshold.
+
+      azoteq,debounce-enter:
+        $ref: /schemas/types.yaml#/definitions/uint32
+        minimum: 0
+        maximum: 255
+        description: Specifies the ALP's debounce entrance factor.
+
+      azoteq,debounce-exit:
+        $ref: /schemas/types.yaml#/definitions/uint32
+        minimum: 0
+        maximum: 255
+        description: Specifies the ALP's debounce exit factor.
+
+      azoteq,counts-beta-lp1:
+        $ref: /schemas/types.yaml#/definitions/uint32
+        minimum: 0
+        maximum: 255
+        description: Specifies the low-power mode 1 counts beta.
+
+      azoteq,lta-beta-lp1:
+        $ref: /schemas/types.yaml#/definitions/uint32
+        minimum: 0
+        maximum: 255
+        description: Specifies the low-power mode 1 long-term average beta.
+
+      azoteq,counts-beta-lp2:
+        $ref: /schemas/types.yaml#/definitions/uint32
+        minimum: 0
+        maximum: 255
+        description: Specifies the low-power mode 2 counts beta.
+
+      azoteq,lta-beta-lp2:
+        $ref: /schemas/types.yaml#/definitions/uint32
+        minimum: 0
+        maximum: 255
+        description: Specifies the low-power mode 2 long-term average beta.
+
+      azoteq,conv-frac:
+        $ref: /schemas/types.yaml#/definitions/uint32
+        minimum: 0
+        maximum: 255
+        description: Specifies the ALP's conversion frequency fraction.
+
+      azoteq,conv-period-1:
+        $ref: /schemas/types.yaml#/definitions/uint32
+        minimum: 0
+        maximum: 255
+        description: Specifies the ALP's conversion period 1.
+
+      azoteq,conv-period-2:
+        $ref: /schemas/types.yaml#/definitions/uint32
+        minimum: 0
+        maximum: 255
+        description: Specifies the ALP's conversion period 2.
+
+      azoteq,delay-cycles:
+        $ref: /schemas/types.yaml#/definitions/uint32
+        enum: [0, 1, 2, 3]
+        description: |
+          Specifies the initial cycle delay as follows:
+          0: 16
+          1: 32
+          2: 64
+          3: 256
+
+      azoteq,proj-bias:
+        $ref: /schemas/types.yaml#/definitions/uint32
+        enum: [0, 1, 2, 3, 4, 5, 6, 7]
+        description: |
+          Specifies the bias current applied during mutual (projected)
+          capacitive sensing as follows:
+          0: 5 uA
+          1: 10 uA
+          2: 15 uA
+          3: 20 uA
+          4: 15 uA
+          5: 20 uA
+          6: 25 uA
+          7: 30 uA
+
+      azoteq,max-counts:
+        $ref: /schemas/types.yaml#/definitions/uint32
+        enum: [0, 1, 2, 3, 4]
+        description: |
+          Specifies the maximum number of conversion periods (counts) that can
+          be reported as follows:
+          0: 383
+          1: 511
+          2: 767
+          3: 1023
+          4: 2047
+
+      azoteq,samp-cap-discharge:
+        $ref: /schemas/types.yaml#/definitions/uint32
+        enum: [0, 1]
+        description: |
+          Specifies the sample capacitor discharge voltage as follows:
+          0: 0.0 V
+          1: 0.5 V
+
+      azoteq,rf-filter:
+        $ref: /schemas/types.yaml#/definitions/uint32
+        enum: [0, 1]
+        description: |
+          Specifies the RF filter enable state as follows:
+          0: Disabled
+          1: Enabled
+
+      azoteq,nm-static-out:
+        $ref: /schemas/types.yaml#/definitions/uint32
+        enum: [0, 1]
+        description: |
+          Specifies the NM static output enable state as follows:
+          0: Disabled
+          1: Enabled
+
+      azoteq,nm-static-in:
+        $ref: /schemas/types.yaml#/definitions/uint32
+        enum: [0, 1]
+        description: |
+          Specifies the NM static input enable state as follows:
+          0: Disabled
+          1: Enabled
+
+      azoteq,proj-offset:
+        $ref: /schemas/types.yaml#/definitions/uint32
+        enum: [0, 1, 2, 3, 4, 5, 6, 7, 9, 10, 11, 12, 13, 14, 15]
+        description: |
+          Specifies the offset voltage applied during mutual (projected)
+          capacitive sensing as follows:
+          0: 0 mV
+          1: -2 mV
+          2: -4 mV
+          3: -6 mV
+          4: -8 mV
+          5: -10 mV
+          6: -12 mV
+          7: -14 mV
+          9: +2 mV
+          10: +4 mV
+          11: +6 mV
+          12: +8 mV
+          13: +10 mV
+          14: +12 mV
+          15: +14 mV
+
+      "#address-cells": true
+      "#size-cells": true
+
+    patternProperties:
+      "^sense@([0-9]|1[0-2])$":
+        type: object
+        description: Represents a sensing engine.
+
+        properties:
+          reg:
+            $ref: /schemas/types.yaml#/definitions/uint32
+            minimum: 0
+            maximum: 12
+            description: Specifies the engine's index.
+
+          azoteq,ati-comp-div:
+            $ref: /schemas/types.yaml#/definitions/uint32
+            minimum: 0
+            maximum: 31
+            description: Specifies the engine's ATI compensation divider.
+
+          azoteq,ati-comp-select:
+            $ref: /schemas/types.yaml#/definitions/uint32
+            minimum: 0
+            maximum: 1023
+            description: Specifies the engine's ATI compensation selection.
+
+          azoteq,ati-frac-mult-fine:
+            $ref: /schemas/types.yaml#/definitions/uint32
+            minimum: 0
+            maximum: 3
+            description: Specifies the engine's ATI fine fractional multiplier.
+
+          azoteq,ati-frac-div-fine:
+            $ref: /schemas/types.yaml#/definitions/uint32
+            minimum: 0
+            maximum: 31
+            description: Specifies the engine's ATI fine fractional divider.
+
+          azoteq,ati-frac-mult-coarse:
+            $ref: /schemas/types.yaml#/definitions/uint32
+            minimum: 0
+            maximum: 15
+            description: Specifies the engine's ATI coarse fractional multiplier.
+
+          azoteq,ati-frac-div-coarse:
+            $ref: /schemas/types.yaml#/definitions/uint32
+            minimum: 0
+            maximum: 31
+            description: Specifies the engine's ATI coarse fractional divider.
+
+        additionalProperties: false
+
+    additionalProperties: false
+
+  wakeup-source: true
+
+  touchscreen-size-x: true
+  touchscreen-size-y: true
+  touchscreen-max-pressure: true
+  touchscreen-min-pressure: true
+  touchscreen-inverted-x: true
+  touchscreen-inverted-y: true
+  touchscreen-swapped-x-y: true
+
+required:
+  - compatible
+  - reg
+  - irq-gpios
+
+additionalProperties: false
+
+allOf:
+  - $ref: touchscreen.yaml#
+
+  - if:
+      properties:
+        compatible:
+          contains:
+            const: azoteq,iqs9151
+
+    then:
+      properties:
+        trackpad:
+          properties:
+            azoteq,rx-enable:
+              maxItems: 13
+              items:
+                maximum: 12
+
+            azoteq,tx-enable:
+              maxItems: 12
+              items:
+                minimum: 33
+
+        alp:
+          properties:
+            azoteq,rx-enable:
+              maxItems: 13
+              items:
+                maximum: 12
+
+            azoteq,tx-enable:
+              maxItems: 12
+              items:
+                minimum: 33
+
+examples:
+  - |
+    #include <dt-bindings/gpio/gpio.h>
+
+    i2c {
+            #address-cells = <1>;
+            #size-cells = <0>;
+
+            touch@56 {
+                    compatible = "azoteq,iqs9150";
+                    reg = <0x56>;
+                    irq-gpios = <&gpio 4 GPIO_ACTIVE_LOW>;
+                    reset-gpios = <&gpio 17 (GPIO_ACTIVE_LOW |
+                                             GPIO_PUSH_PULL)>;
+
+                    touchscreen-size-x = <2001>;
+                    touchscreen-size-y = <752>;
+
+                    azoteq,rate-active-ms = <10>;
+                    azoteq,rate-touch-ms = <50>;
+                    azoteq,rate-idle-ms = <30>;
+                    azoteq,rate-lp1-ms = <50>;
+                    azoteq,rate-lp2-ms = <150>;
+                    azoteq,timeout-press-ms = <10000>;
+                    azoteq,timeout-touch-ms = <60000>;
+                    azoteq,timeout-idle-ms = <5000>;
+                    azoteq,timeout-lp1-ms = <40000>;
+                    azoteq,timeout-release-ms = <1500>;
+                    azoteq,timeout-ati-ms = <5000>;
+                    azoteq,rate-ref-ms = <8000>;
+                    azoteq,timeout-comms-ms = <100>;
+                    azoteq,timeout-snap-ms = <20000>;
+                    azoteq,fosc-trim = <0>;
+                    azoteq,fosc-freq = <2>;
+
+                    trackpad {
+                            azoteq,rx-enable = <15>,
+                                               <2>,
+                                               <14>,
+                                               <1>,
+                                               <13>,
+                                               <0>,
+                                               <3>,
+                                               <16>,
+                                               <4>,
+                                               <17>,
+                                               <5>,
+                                               <18>,
+                                               <6>,
+                                               <19>,
+                                               <7>,
+                                               <20>,
+                                               <8>,
+                                               <21>,
+                                               <24>,
+                                               <12>,
+                                               <25>,
+                                               <11>,
+                                               <23>,
+                                               <10>,
+                                               <22>,
+                                               <9>;
+
+                            azoteq,tx-enable = <42>,
+                                               <41>,
+                                               <40>,
+                                               <39>,
+                                               <38>,
+                                               <37>,
+                                               <36>,
+                                               <35>,
+                                               <34>,
+                                               <33>,
+                                               <32>;
+
+                            azoteq,ati-frac-mult-fine = <1>;
+                            azoteq,ati-frac-div-fine = <5>;
+                            azoteq,ati-frac-mult-coarse = <9>;
+                            azoteq,ati-frac-div-coarse = <1>;
+                            azoteq,ati-target = <350>;
+                            azoteq,ati-delta-neg = <50>;
+                            azoteq,ati-delta-pos = <1000>;
+                            azoteq,ati-drift = <50>;
+
+                            azoteq,touch-enter = <26>;
+                            azoteq,touch-exit = <20>;
+                            azoteq,snap-enter = <50>;
+                            azoteq,snap-exit = <50>;
+
+                            azoteq,conv-frac = <40>;
+                            azoteq,conv-period-1 = <2>;
+                            azoteq,conv-period-2 = <2>;
+                            azoteq,delay-cycles = <1>;
+                            azoteq,proj-bias = <2>;
+                            azoteq,max-counts = <4>;
+                            azoteq,samp-cap-discharge = <0>;
+                            azoteq,rf-filter = <0>;
+                            azoteq,nm-static-out = <0>;
+                            azoteq,nm-static-in = <0>;
+                            azoteq,proj-offset = <0>;
+
+                            azoteq,area-filter = <1>;
+                            azoteq,jitter-filter = <1>;
+                            azoteq,iir-static = <0>;
+                            azoteq,iir-filter = <1>;
+                            azoteq,num-contacts = <7>;
+                            azoteq,bottom-speed = <6>;
+                            azoteq,top-speed = <200>;
+                            azoteq,bottom-beta = <2>;
+                            azoteq,static-beta = <128>;
+                            azoteq,thresh = <20>;
+                            azoteq,contact-split = <3>;
+                            azoteq,trim-x = <20>;
+                            azoteq,trim-y = <20>;
+                            azoteq,jitter-delta = <3>;
+                            azoteq,contact-confidence = <15>;
+                    };
+
+                    alp {
+                            azoteq,rx-enable = <15>,
+                                               <2>,
+                                               <14>,
+                                               <1>,
+                                               <13>,
+                                               <0>,
+                                               <3>,
+                                               <16>,
+                                               <4>,
+                                               <17>,
+                                               <5>,
+                                               <18>,
+                                               <6>,
+                                               <19>,
+                                               <7>,
+                                               <20>,
+                                               <8>,
+                                               <21>,
+                                               <24>,
+                                               <12>,
+                                               <25>,
+                                               <11>,
+                                               <23>,
+                                               <10>,
+                                               <22>,
+                                               <9>;
+
+                            azoteq,tx-enable = <42>,
+                                               <41>,
+                                               <40>,
+                                               <39>,
+                                               <38>,
+                                               <37>,
+                                               <36>,
+                                               <35>,
+                                               <34>,
+                                               <33>,
+                                               <32>;
+
+                            azoteq,ati-target = <300>;
+                            azoteq,ati-base = <50>;
+                            azoteq,ati-drift = <20>;
+
+                            azoteq,auto-prox-lp2 = <1>;
+                            azoteq,auto-prox-lp1 = <0>;
+                            azoteq,auto-prox-cycles-lp2 = <2>;
+                            azoteq,auto-prox-cycles-lp1 = <0>;
+                            azoteq,count-filter = <1>;
+                            azoteq,sense-mode = <1>;
+                            azoteq,tx-shield = <0>;
+
+                            azoteq,thresh = <8>;
+                            azoteq,auto-prox-delta = <8>;
+                            azoteq,debounce-enter = <2>;
+                            azoteq,debounce-exit = <2>;
+
+                            azoteq,counts-beta-lp1 = <70>;
+                            azoteq,lta-beta-lp1 = <4>;
+                            azoteq,counts-beta-lp2 = <180>;
+                            azoteq,lta-beta-lp2 = <100>;
+
+                            azoteq,conv-frac = <40>;
+                            azoteq,conv-period-1 = <2>;
+                            azoteq,conv-period-2 = <2>;
+                            azoteq,delay-cycles = <1>;
+                            azoteq,proj-bias = <1>;
+                            azoteq,max-counts = <3>;
+                            azoteq,samp-cap-discharge = <0>;
+                            azoteq,rf-filter = <1>;
+                            azoteq,nm-static-out = <0>;
+                            azoteq,nm-static-in = <0>;
+                            azoteq,proj-offset = <0>;
+
+                            #address-cells = <1>;
+                            #size-cells = <0>;
+
+                            sense@0 {
+                                    reg = <0>;
+                                    azoteq,ati-comp-div = <4>;
+                                    azoteq,ati-comp-select = <761>;
+                                    azoteq,ati-frac-mult-fine = <1>;
+                                    azoteq,ati-frac-div-fine = <12>;
+                                    azoteq,ati-frac-mult-coarse = <8>;
+                                    azoteq,ati-frac-div-coarse = <4>;
+                            };
+
+                            sense@1 {
+                                    reg = <1>;
+                                    azoteq,ati-comp-div = <4>;
+                                    azoteq,ati-comp-select = <763>;
+                                    azoteq,ati-frac-mult-fine = <1>;
+                                    azoteq,ati-frac-div-fine = <12>;
+                                    azoteq,ati-frac-mult-coarse = <8>;
+                                    azoteq,ati-frac-div-coarse = <4>;
+                            };
+
+                            sense@2 {
+                                    reg = <2>;
+                                    azoteq,ati-comp-div = <4>;
+                                    azoteq,ati-comp-select = <796>;
+                                    azoteq,ati-frac-mult-fine = <1>;
+                                    azoteq,ati-frac-div-fine = <11>;
+                                    azoteq,ati-frac-mult-coarse = <8>;
+                                    azoteq,ati-frac-div-coarse = <4>;
+                            };
+
+                            sense@3 {
+                                    reg = <3>;
+                                    azoteq,ati-comp-div = <4>;
+                                    azoteq,ati-comp-select = <759>;
+                                    azoteq,ati-frac-mult-fine = <1>;
+                                    azoteq,ati-frac-div-fine = <12>;
+                                    azoteq,ati-frac-mult-coarse = <8>;
+                                    azoteq,ati-frac-div-coarse = <4>;
+                            };
+
+                            sense@4 {
+                                    reg = <4>;
+                                    azoteq,ati-comp-div = <4>;
+                                    azoteq,ati-comp-select = <762>;
+                                    azoteq,ati-frac-mult-fine = <1>;
+                                    azoteq,ati-frac-div-fine = <12>;
+                                    azoteq,ati-frac-mult-coarse = <8>;
+                                    azoteq,ati-frac-div-coarse = <4>;
+                            };
+
+                            sense@5 {
+                                    reg = <5>;
+                                    azoteq,ati-comp-div = <4>;
+                                    azoteq,ati-comp-select = <789>;
+                                    azoteq,ati-frac-mult-fine = <1>;
+                                    azoteq,ati-frac-div-fine = <12>;
+                                    azoteq,ati-frac-mult-coarse = <8>;
+                                    azoteq,ati-frac-div-coarse = <4>;
+                            };
+
+                            sense@6 {
+                                    reg = <6>;
+                                    azoteq,ati-comp-div = <4>;
+                                    azoteq,ati-comp-select = <731>;
+                                    azoteq,ati-frac-mult-fine = <1>;
+                                    azoteq,ati-frac-div-fine = <14>;
+                                    azoteq,ati-frac-mult-coarse = <8>;
+                                    azoteq,ati-frac-div-coarse = <4>;
+                            };
+
+                            sense@7 {
+                                    reg = <7>;
+                                    azoteq,ati-comp-div = <4>;
+                                    azoteq,ati-comp-select = <761>;
+                                    azoteq,ati-frac-mult-fine = <1>;
+                                    azoteq,ati-frac-div-fine = <13>;
+                                    azoteq,ati-frac-mult-coarse = <8>;
+                                    azoteq,ati-frac-div-coarse = <4>;
+                            };
+
+                            sense@8 {
+                                    reg = <8>;
+                                    azoteq,ati-comp-div = <4>;
+                                    azoteq,ati-comp-select = <778>;
+                                    azoteq,ati-frac-mult-fine = <1>;
+                                    azoteq,ati-frac-div-fine = <12>;
+                                    azoteq,ati-frac-mult-coarse = <8>;
+                                    azoteq,ati-frac-div-coarse = <4>;
+                            };
+
+                            sense@9 {
+                                    reg = <9>;
+                                    azoteq,ati-comp-div = <4>;
+                                    azoteq,ati-comp-select = <731>;
+                                    azoteq,ati-frac-mult-fine = <1>;
+                                    azoteq,ati-frac-div-fine = <12>;
+                                    azoteq,ati-frac-mult-coarse = <8>;
+                                    azoteq,ati-frac-div-coarse = <4>;
+                            };
+
+                            sense@10 {
+                                    reg = <10>;
+                                    azoteq,ati-comp-div = <4>;
+                                    azoteq,ati-comp-select = <762>;
+                                    azoteq,ati-frac-mult-fine = <1>;
+                                    azoteq,ati-frac-div-fine = <12>;
+                                    azoteq,ati-frac-mult-coarse = <8>;
+                                    azoteq,ati-frac-div-coarse = <4>;
+                            };
+
+                            sense@11 {
+                                    reg = <11>;
+                                    azoteq,ati-comp-div = <4>;
+                                    azoteq,ati-comp-select = <763>;
+                                    azoteq,ati-frac-mult-fine = <1>;
+                                    azoteq,ati-frac-div-fine = <12>;
+                                    azoteq,ati-frac-mult-coarse = <8>;
+                                    azoteq,ati-frac-div-coarse = <4>;
+                            };
+
+                            sense@12 {
+                                    reg = <12>;
+                                    azoteq,ati-comp-div = <4>;
+                                    azoteq,ati-comp-select = <770>;
+                                    azoteq,ati-frac-mult-fine = <1>;
+                                    azoteq,ati-frac-div-fine = <12>;
+                                    azoteq,ati-frac-mult-coarse = <8>;
+                                    azoteq,ati-frac-div-coarse = <4>;
+                            };
+                    };
+            };
+    };
+
+...
