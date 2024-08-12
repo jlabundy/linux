@@ -1375,6 +1375,16 @@ config TOUCHSCREEN_IQS7211
 	  To compile this driver as a module, choose M here: the
 	  module will be called iqs7211.
 
+config TOUCHSCREEN_IQS9150
+	tristate "Azoteq IQS9150/9151 trackpad controller"
+	depends on I2C
+	help
+	  Say Y to enable support for the Azoteq IQS9150/9151
+	  family of trackpad controllers.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called iqs9150.
+
 config TOUCHSCREEN_ZINITIX
 	tristate "Zinitix touchscreen support"
 	depends on I2C
