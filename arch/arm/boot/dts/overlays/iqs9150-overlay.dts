@@ -23,6 +23,110 @@
 				pinctrl-0 = <&iqs9150_pins>;
 				touchscreen-max-pressure = <4095>;
 				azoteq,forced-comms;
+
+				gesture-single {
+					event-tap {
+						linux,code = <KEY_PLAYPAUSE>;
+					};
+
+					event-tap-double {
+						linux,code = <KEY_SHUFFLE>;
+					};
+
+					event-tap-triple {
+						linux,code = <KEY_AGAIN>;
+					};
+
+					event-hold {
+						linux,code = <KEY_STOP>;
+					};
+
+					event-palm {
+						linux,code = <KEY_EXIT>;
+					};
+
+					event-swipe-x-pos {
+						linux,code = <KEY_FASTFORWARD>;
+					};
+
+					event-swipe-x-pos-hold {
+						linux,code = <KEY_NEXT>;
+					};
+
+					event-swipe-x-neg {
+						linux,code = <KEY_REWIND>;
+					};
+
+					event-swipe-x-neg-hold {
+						linux,code = <KEY_PREVIOUS>;
+					};
+
+					event-swipe-y-pos {
+						linux,code = <KEY_VOLUMEDOWN>;
+					};
+
+					event-swipe-y-pos-hold {
+						linux,code = <KEY_MUTE>;
+					};
+
+					event-swipe-y-neg {
+						linux,code = <KEY_VOLUMEUP>;
+					};
+
+					event-swipe-y-neg-hold {
+						linux,code = <KEY_UNMUTE>;
+					};
+				};
+
+				gesture-double {
+					event-tap {
+						linux,code = <KEY_SELECT>;
+					};
+
+					event-tap-double {
+						linux,code = <KEY_OPEN>;
+					};
+
+					event-tap-triple {
+						linux,code = <KEY_CLOSE>;
+					};
+
+					event-hold {
+						linux,code = <KEY_CLEAR>;
+					};
+
+					event-zoom-pos {
+						linux,code = <KEY_ZOOMIN>;
+					};
+
+					event-zoom-neg {
+						linux,code = <KEY_ZOOMOUT>;
+					};
+
+					event-scroll-y-pos {
+						linux,code = <KEY_SCROLLDOWN>;
+					};
+
+					event-scroll-y-neg {
+						linux,code = <KEY_SCROLLUP>;
+					};
+
+					event-scroll-x-pos {
+						linux,code = <KEY_RIGHT>;
+					};
+
+					event-scroll-x-neg {
+						linux,code = <KEY_LEFT>;
+					};
+				};
+
+				switch {
+					linux,code = <KEY_HOME>;
+				};
+
+				alp {
+					linux,code = <KEY_POWER>;
+				};
 			};
 		};
 	};
