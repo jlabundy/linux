@@ -25,13 +25,15 @@
 #include <asm/unaligned.h>
 
 #define IQS9150_PROD_NUM			0x1000
-#define IQS9150_GESTURES			0x101C
+#define IQS9150_STATUS				0x1018
 
 #define IQS9150_INFO_SHOW_RESET			BIT(7)
 #define IQS9150_INFO_ALP_ATI_AGAIN		BIT(6)
 #define IQS9150_INFO_ALP_ATI_ERROR		BIT(5)
 #define IQS9150_INFO_TP_ATI_AGAIN		BIT(4)
 #define IQS9150_INFO_TP_ATI_ERROR		BIT(3)
+#define IQS9150_INFO_CHARGE_MODE		GENMASK(2, 0)
+#define IQS9150_INFO_CHARGE_MODE_LP1		3
 
 #define IQS9150_REG_BUF_START			(0x115C)
 #define IQS9150_REG_BUF_LEN			(0x14F0 - IQS9150_REG_BUF_START)
@@ -46,18 +48,18 @@
 #define IQS9150_CONTROL_ATI_TP			BIT(5)
 
 #define IQS9150_CONFIG				0x11BE
-#define IQS9150_CONFIG_EVENT_MASK		GENMASK(15, 8)
-#define IQS9150_CONFIG_EVENT_BTN		BIT(14)
-#define IQS9150_CONFIG_EVENT_ALP		BIT(12)
+#define IQS9150_CONFIG_EVENT_MASK		GENMASK(15, 9)
 #define IQS9150_CONFIG_EVENT_ATI		BIT(11)
-#define IQS9150_CONFIG_EVENT_MOVE		BIT(10)
-#define IQS9150_CONFIG_EVENT_GSTR		BIT(9)
 #define IQS9150_CONFIG_EVENT_MODE		BIT(8)
 #define IQS9150_CONFIG_FORCED_COMMS		BIT(4)
 
-#define IQS9150_ALP_SETUP			0x11C2
-#define IQS9150_ALP_SETUP_ENABLE		BIT(31)
+#define IQS9150_OTHER				0x11C0
+#define IQS9150_OTHER_SW_ENABLE			BIT(15)
 
+#define IQS9150_ALP_SETUP			0x11C5
+#define IQS9150_ALP_SETUP_ENABLE		BIT(7)
+
+#define IQS9150_ALP_RX_ENABLE			0x11C2
 #define IQS9150_ALP_TX_ENABLE			0x11C6
 
 #define IQS9150_TOTAL_RX			0x11E3
@@ -65,6 +67,8 @@
 #define IQS9150_NUM_CONTACTS			0x11E5
 #define IQS9150_X_RES				0x11E6
 #define IQS9150_Y_RES				0x11E8
+#define IQS9150_ANGLE_AXIAL			0x120C
+#define IQS9150_ANGLE_SCROLL			0x120D
 #define IQS9150_RX_TX_MAP			0x1218
 
 #define IQS9150_COMMS_ERROR			0xEEEE
@@ -105,34 +109,79 @@ enum iqs9150_reg_key_id {
 	IQS9150_REG_KEY_NONE,
 	IQS9150_REG_KEY_SPAN,
 	IQS9150_REG_KEY_MASK,
-	IQS9150_REG_KEY_PROX,
-	IQS9150_REG_KEY_TOUCH,
 	IQS9150_REG_KEY_TAP,
 	IQS9150_REG_KEY_HOLD,
 	IQS9150_REG_KEY_PALM,
 	IQS9150_REG_KEY_AXIAL_X,
 	IQS9150_REG_KEY_AXIAL_Y,
+	IQS9150_REG_KEY_ZOOM,
+	IQS9150_REG_KEY_SCROLL_X,
+	IQS9150_REG_KEY_SCROLL_Y,
 	IQS9150_REG_KEY_RESERVED
 };
 
 enum iqs9150_reg_grp_id {
 	IQS9150_REG_GRP_TP,
-	IQS9150_REG_GRP_BTN,
+	IQS9150_REG_GRP_1F,
+	IQS9150_REG_GRP_2F,
+	IQS9150_REG_GRP_SW,
 	IQS9150_REG_GRP_ALP,
 	IQS9150_REG_GRP_SYS,
 	IQS9150_NUM_REG_GRPS
 };
 
-static const char * const iqs9150_reg_grp_names[IQS9150_NUM_REG_GRPS] = {
-	[IQS9150_REG_GRP_TP] = "trackpad",
-	[IQS9150_REG_GRP_BTN] = "button",
-	[IQS9150_REG_GRP_ALP] = "alp",
+struct iqs9150_reg_grp_desc {
+	const char *name;
+	int status_offs;
+	u16 enable_addr;
+	u16 event_mask;
+	u16 ati_mask;
+};
+
+static const struct iqs9150_reg_grp_desc
+		    iqs9150_reg_grps[IQS9150_NUM_REG_GRPS] = {
+	[IQS9150_REG_GRP_TP] = {
+		.name = "trackpad",
+		.event_mask = BIT(10),
+		.ati_mask = IQS9150_INFO_TP_ATI_ERROR |
+			    IQS9150_INFO_TP_ATI_AGAIN,
+	},
+	[IQS9150_REG_GRP_1F] = {
+		.name = "gesture-single",
+		.status_offs = 0,
+		.enable_addr = 0x11F6,
+		.event_mask = BIT(9),
+		.ati_mask = IQS9150_INFO_TP_ATI_ERROR |
+			    IQS9150_INFO_TP_ATI_AGAIN,
+	},
+	[IQS9150_REG_GRP_2F] = {
+		.name = "gesture-double",
+		.status_offs = 1,
+		.enable_addr = 0x11F8,
+		.event_mask = BIT(9),
+		.ati_mask = IQS9150_INFO_TP_ATI_ERROR |
+			    IQS9150_INFO_TP_ATI_AGAIN,
+	},
+	[IQS9150_REG_GRP_SW] = {
+		.name = "switch",
+		.status_offs = 2,
+		.enable_addr = IQS9150_OTHER,
+		.event_mask = BIT(14),
+	},
+	[IQS9150_REG_GRP_ALP] = {
+		.name = "alp",
+		.status_offs = 2,
+		.event_mask = BIT(12),
+		.ati_mask = IQS9150_INFO_ALP_ATI_ERROR |
+			    IQS9150_INFO_ALP_ATI_AGAIN,
+	},
 };
 
 struct iqs9150_event_desc {
 	const char *name;
-	u16 mask;
-	u16 enable;
+	u16 status_mask;
+	u16 enable_mask;
+	u16 travel_mask;
 	enum iqs9150_reg_grp_id reg_grp;
 	enum iqs9150_reg_key_id reg_key;
 };
@@ -140,9 +189,176 @@ struct iqs9150_event_desc {
 static const struct iqs9150_event_desc iqs9150_kp_events[] = {
 	{
 		.name = "event-tap",
-		.mask = BIT(0),
-		.enable = BIT(0),
-		.reg_grp = IQS9150_REG_GRP_TP,
+		.status_mask = BIT(0),
+		.enable_mask = BIT(0),
+		.reg_grp = IQS9150_REG_GRP_1F,
+		.reg_key = IQS9150_REG_KEY_TAP,
+	},
+	{
+		.name = "event-tap-double",
+		.status_mask = BIT(1),
+		.enable_mask = BIT(1),
+		.reg_grp = IQS9150_REG_GRP_1F,
+		.reg_key = IQS9150_REG_KEY_TAP,
+	},
+	{
+		.name = "event-tap-triple",
+		.status_mask = BIT(2),
+		.enable_mask = BIT(2),
+		.reg_grp = IQS9150_REG_GRP_1F,
+		.reg_key = IQS9150_REG_KEY_TAP,
+	},
+	{
+		.name = "event-hold",
+		.status_mask = BIT(3),
+		.enable_mask = BIT(3),
+		.reg_grp = IQS9150_REG_GRP_1F,
+		.reg_key = IQS9150_REG_KEY_HOLD,
+	},
+	{
+		.name = "event-palm",
+		.status_mask = BIT(4),
+		.enable_mask = BIT(4),
+		.reg_grp = IQS9150_REG_GRP_1F,
+		.reg_key = IQS9150_REG_KEY_PALM,
+	},
+	{
+		.name = "event-swipe-x-pos",
+		.status_mask = BIT(8),
+		.enable_mask = BIT(8),
+		.reg_grp = IQS9150_REG_GRP_1F,
+		.reg_key = IQS9150_REG_KEY_AXIAL_X,
+	},
+	{
+		.name = "event-swipe-x-neg",
+		.status_mask = BIT(9),
+		.enable_mask = BIT(9),
+		.reg_grp = IQS9150_REG_GRP_1F,
+		.reg_key = IQS9150_REG_KEY_AXIAL_X,
+	},
+	{
+		.name = "event-swipe-y-pos",
+		.status_mask = BIT(10),
+		.enable_mask = BIT(10),
+		.reg_grp = IQS9150_REG_GRP_1F,
+		.reg_key = IQS9150_REG_KEY_AXIAL_Y,
+	},
+	{
+		.name = "event-swipe-y-neg",
+		.status_mask = BIT(11),
+		.enable_mask = BIT(11),
+		.reg_grp = IQS9150_REG_GRP_1F,
+		.reg_key = IQS9150_REG_KEY_AXIAL_Y,
+	},
+	{
+		.name = "event-swipe-x-pos-hold",
+		.status_mask = BIT(12),
+		.enable_mask = BIT(12),
+		.reg_grp = IQS9150_REG_GRP_1F,
+		.reg_key = IQS9150_REG_KEY_HOLD,
+	},
+	{
+		.name = "event-swipe-x-neg-hold",
+		.status_mask = BIT(13),
+		.enable_mask = BIT(13),
+		.reg_grp = IQS9150_REG_GRP_1F,
+		.reg_key = IQS9150_REG_KEY_HOLD,
+	},
+	{
+		.name = "event-swipe-y-pos-hold",
+		.status_mask = BIT(14),
+		.enable_mask = BIT(14),
+		.reg_grp = IQS9150_REG_GRP_1F,
+		.reg_key = IQS9150_REG_KEY_HOLD,
+	},
+	{
+		.name = "event-swipe-y-neg-hold",
+		.status_mask = BIT(15),
+		.enable_mask = BIT(15),
+		.reg_grp = IQS9150_REG_GRP_1F,
+		.reg_key = IQS9150_REG_KEY_HOLD,
+	},
+	{
+		.name = "event-tap",
+		.status_mask = BIT(0),
+		.enable_mask = BIT(0),
+		.reg_grp = IQS9150_REG_GRP_2F,
+		.reg_key = IQS9150_REG_KEY_TAP,
+	},
+	{
+		.name = "event-tap-double",
+		.status_mask = BIT(1),
+		.enable_mask = BIT(1),
+		.reg_grp = IQS9150_REG_GRP_2F,
+		.reg_key = IQS9150_REG_KEY_TAP,
+	},
+	{
+		.name = "event-tap-triple",
+		.status_mask = BIT(2),
+		.enable_mask = BIT(2),
+		.reg_grp = IQS9150_REG_GRP_2F,
+		.reg_key = IQS9150_REG_KEY_TAP,
+	},
+	{
+		.name = "event-hold",
+		.status_mask = BIT(3),
+		.enable_mask = BIT(3),
+		.reg_grp = IQS9150_REG_GRP_2F,
+		.reg_key = IQS9150_REG_KEY_HOLD,
+	},
+	{
+		.name = "event-zoom-pos",
+		.status_mask = BIT(4),
+		.enable_mask = BIT(4),
+		.reg_grp = IQS9150_REG_GRP_2F,
+		.reg_key = IQS9150_REG_KEY_ZOOM,
+	},
+	{
+		.name = "event-zoom-neg",
+		.status_mask = BIT(5),
+		.enable_mask = BIT(5),
+		.reg_grp = IQS9150_REG_GRP_2F,
+		.reg_key = IQS9150_REG_KEY_ZOOM,
+	},
+	{
+		.name = "event-scroll-y-pos",
+		.status_mask = BIT(6),
+		.enable_mask = BIT(6),
+		.reg_grp = IQS9150_REG_GRP_2F,
+		.reg_key = IQS9150_REG_KEY_SCROLL_Y,
+	},
+	{
+		.name = "event-scroll-y-neg",
+		.status_mask = BIT(6),
+		.enable_mask = BIT(6),
+		.travel_mask = BIT(15),
+		.reg_grp = IQS9150_REG_GRP_2F,
+		.reg_key = IQS9150_REG_KEY_SCROLL_Y,
+	},
+	{
+		.name = "event-scroll-x-pos",
+		.status_mask = BIT(7),
+		.enable_mask = BIT(7),
+		.reg_grp = IQS9150_REG_GRP_2F,
+		.reg_key = IQS9150_REG_KEY_SCROLL_X,
+	},
+	{
+		.name = "event-scroll-x-neg",
+		.status_mask = BIT(7),
+		.enable_mask = BIT(7),
+		.travel_mask = BIT(15),
+		.reg_grp = IQS9150_REG_GRP_2F,
+		.reg_key = IQS9150_REG_KEY_SCROLL_X,
+	},
+	{
+		.status_mask = BIT(10),
+		.enable_mask = IQS9150_OTHER_SW_ENABLE,
+		.reg_grp = IQS9150_REG_GRP_SW,
+		.reg_key = IQS9150_REG_KEY_HOLD,
+	},
+	{
+		.status_mask = BIT(8),
+		.reg_grp = IQS9150_REG_GRP_ALP,
 		.reg_key = IQS9150_REG_KEY_TAP,
 	},
 };
@@ -399,8 +615,24 @@ static const struct iqs9150_prop_desc iqs9150_props[] = {
 		.label = "snap timeout",
 	},
 	{
+		.name = "azoteq,ati-mode",
+		.reg_addr[IQS9150_REG_GRP_ALP] = IQS9150_CONFIG,
+		.reg_size = sizeof(u16),
+		.reg_shift = 1,
+		.reg_width = 1,
+		.label = "ATI mode",
+	},
+	{
+		.name = "azoteq,pin-polarity",
+		.reg_addr[IQS9150_REG_GRP_SW] = IQS9150_OTHER,
+		.reg_size = sizeof(u16),
+		.reg_shift = 14,
+		.reg_width = 1,
+		.label = "pin polarity",
+	},
+	{
 		.name = "azoteq,fosc-trim",
-		.reg_addr[IQS9150_REG_GRP_SYS] = 0x11C0,
+		.reg_addr[IQS9150_REG_GRP_SYS] = IQS9150_OTHER,
 		.reg_size = sizeof(u16),
 		.reg_shift = 12,
 		.reg_width = 2,
@@ -408,7 +640,7 @@ static const struct iqs9150_prop_desc iqs9150_props[] = {
 	},
 	{
 		.name = "azoteq,fosc-freq",
-		.reg_addr[IQS9150_REG_GRP_SYS] = 0x11C0,
+		.reg_addr[IQS9150_REG_GRP_SYS] = IQS9150_OTHER,
 		.reg_size = sizeof(u16),
 		.reg_shift = 6,
 		.reg_width = 2,
@@ -417,7 +649,7 @@ static const struct iqs9150_prop_desc iqs9150_props[] = {
 	},
 	{
 		.name = "azoteq,auto-prox-lp2",
-		.reg_addr[IQS9150_REG_GRP_ALP] = 0x11C0,
+		.reg_addr[IQS9150_REG_GRP_ALP] = IQS9150_OTHER,
 		.reg_size = sizeof(u16),
 		.reg_shift = 5,
 		.reg_width = 1,
@@ -425,7 +657,7 @@ static const struct iqs9150_prop_desc iqs9150_props[] = {
 	},
 	{
 		.name = "azoteq,auto-prox-lp1",
-		.reg_addr[IQS9150_REG_GRP_ALP] = 0x11C0,
+		.reg_addr[IQS9150_REG_GRP_ALP] = IQS9150_OTHER,
 		.reg_size = sizeof(u16),
 		.reg_shift = 4,
 		.reg_width = 1,
@@ -433,7 +665,7 @@ static const struct iqs9150_prop_desc iqs9150_props[] = {
 	},
 	{
 		.name = "azoteq,auto-prox-cycles-lp2",
-		.reg_addr[IQS9150_REG_GRP_ALP] = 0x11C0,
+		.reg_addr[IQS9150_REG_GRP_ALP] = IQS9150_OTHER,
 		.reg_size = sizeof(u16),
 		.reg_shift = 2,
 		.reg_width = 2,
@@ -441,7 +673,7 @@ static const struct iqs9150_prop_desc iqs9150_props[] = {
 	},
 	{
 		.name = "azoteq,auto-prox-cycles-lp1",
-		.reg_addr[IQS9150_REG_GRP_ALP] = 0x11C0,
+		.reg_addr[IQS9150_REG_GRP_ALP] = IQS9150_OTHER,
 		.reg_size = sizeof(u16),
 		.reg_shift = 0,
 		.reg_width = 2,
@@ -449,21 +681,21 @@ static const struct iqs9150_prop_desc iqs9150_props[] = {
 	},
 	{
 		.name = "azoteq,count-filter",
-		.reg_addr[IQS9150_REG_GRP_ALP] = IQS9150_ALP_SETUP + 3,
+		.reg_addr[IQS9150_REG_GRP_ALP] = IQS9150_ALP_SETUP,
 		.reg_shift = 6,
 		.reg_width = 1,
 		.label = "count filter enable state",
 	},
 	{
 		.name = "azoteq,sense-mode",
-		.reg_addr[IQS9150_REG_GRP_ALP] = IQS9150_ALP_SETUP + 3,
+		.reg_addr[IQS9150_REG_GRP_ALP] = IQS9150_ALP_SETUP,
 		.reg_shift = 5,
 		.reg_width = 1,
 		.label = "sensing mode",
 	},
 	{
 		.name = "azoteq,tx-shield",
-		.reg_addr[IQS9150_REG_GRP_ALP] = IQS9150_ALP_SETUP + 3,
+		.reg_addr[IQS9150_REG_GRP_ALP] = IQS9150_ALP_SETUP,
 		.reg_shift = 4,
 		.reg_width = 1,
 		.label = "TX pin shield state",
@@ -672,6 +904,8 @@ static const struct iqs9150_prop_desc iqs9150_props[] = {
 	{
 		.name = "azoteq,num-contacts",
 		.reg_addr[IQS9150_REG_GRP_TP] = IQS9150_NUM_CONTACTS,
+		.val_min = 1,
+		.val_max = IQS9150_MAX_CONTACTS,
 		.label = "number of contacts",
 	},
 	{
@@ -727,6 +961,148 @@ static const struct iqs9150_prop_desc iqs9150_props[] = {
 		.label = "contact confidence threshold",
 	},
 	{
+		.name = "azoteq,gesture-max-ms",
+		.reg_key = IQS9150_REG_KEY_TAP,
+		.reg_addr = {
+			[IQS9150_REG_GRP_1F] = 0x11FA,
+			[IQS9150_REG_GRP_2F] = 0x11FA,
+		},
+		.reg_size = sizeof(u16),
+		.label = "maximum gesture time",
+	},
+	{
+		.name = "azoteq,gesture-mid-ms",
+		.reg_key = IQS9150_REG_KEY_TAP,
+		.reg_addr = {
+			[IQS9150_REG_GRP_1F] = 0x11FC,
+			[IQS9150_REG_GRP_2F] = 0x11FC,
+		},
+		.reg_size = sizeof(u16),
+		.label = "repeated gesture time",
+	},
+	{
+		.name = "azoteq,gesture-dist",
+		.reg_key = IQS9150_REG_KEY_TAP,
+		.reg_addr = {
+			[IQS9150_REG_GRP_1F] = 0x11FE,
+			[IQS9150_REG_GRP_2F] = 0x11FE,
+		},
+		.reg_size = sizeof(u16),
+		.label = "gesture distance",
+	},
+	{
+		.name = "azoteq,gesture-dist",
+		.reg_key = IQS9150_REG_KEY_HOLD,
+		.reg_addr = {
+			[IQS9150_REG_GRP_1F] = 0x11FE,
+			[IQS9150_REG_GRP_2F] = 0x11FE,
+		},
+		.reg_size = sizeof(u16),
+		.label = "gesture distance",
+	},
+	{
+		.name = "azoteq,gesture-min-ms",
+		.reg_key = IQS9150_REG_KEY_HOLD,
+		.reg_addr = {
+			[IQS9150_REG_GRP_1F] = 0x1200,
+			[IQS9150_REG_GRP_2F] = 0x1200,
+		},
+		.reg_size = sizeof(u16),
+		.label = "minimum gesture time",
+	},
+	{
+		.name = "azoteq,gesture-max-ms",
+		.reg_key = IQS9150_REG_KEY_AXIAL_X,
+		.reg_addr[IQS9150_REG_GRP_1F] = 0x1202,
+		.reg_size = sizeof(u16),
+		.label = "maximum gesture time",
+	},
+	{
+		.name = "azoteq,gesture-max-ms",
+		.reg_key = IQS9150_REG_KEY_AXIAL_Y,
+		.reg_addr[IQS9150_REG_GRP_1F] = 0x1202,
+		.reg_size = sizeof(u16),
+		.label = "maximum gesture time",
+	},
+	{
+		.name = "azoteq,gesture-dist",
+		.reg_key = IQS9150_REG_KEY_AXIAL_X,
+		.reg_addr[IQS9150_REG_GRP_1F] = 0x1204,
+		.reg_size = sizeof(u16),
+		.label = "gesture distance",
+	},
+	{
+		.name = "azoteq,gesture-dist",
+		.reg_key = IQS9150_REG_KEY_AXIAL_Y,
+		.reg_addr[IQS9150_REG_GRP_1F] = 0x1206,
+		.reg_size = sizeof(u16),
+		.label = "gesture distance",
+	},
+	{
+		.name = "azoteq,gesture-dist-rep",
+		.reg_key = IQS9150_REG_KEY_AXIAL_X,
+		.reg_addr[IQS9150_REG_GRP_1F] = 0x1208,
+		.reg_size = sizeof(u16),
+		.label = "repeated gesture distance",
+	},
+	{
+		.name = "azoteq,gesture-dist-rep",
+		.reg_key = IQS9150_REG_KEY_AXIAL_Y,
+		.reg_addr[IQS9150_REG_GRP_1F] = 0x120A,
+		.reg_size = sizeof(u16),
+		.label = "repeated gesture distance",
+	},
+	{
+		.name = "azoteq,gesture-dist",
+		.reg_key = IQS9150_REG_KEY_ZOOM,
+		.reg_addr[IQS9150_REG_GRP_2F] = 0x120E,
+		.reg_size = sizeof(u16),
+		.label = "gesture distance",
+	},
+	{
+		.name = "azoteq,gesture-dist-rep",
+		.reg_key = IQS9150_REG_KEY_ZOOM,
+		.reg_addr[IQS9150_REG_GRP_2F] = 0x1210,
+		.reg_size = sizeof(u16),
+		.label = "repeated gesture distance",
+	},
+	{
+		.name = "azoteq,gesture-dist",
+		.reg_key = IQS9150_REG_KEY_SCROLL_X,
+		.reg_addr[IQS9150_REG_GRP_2F] = 0x1212,
+		.reg_size = sizeof(u16),
+		.label = "gesture distance",
+	},
+	{
+		.name = "azoteq,gesture-dist",
+		.reg_key = IQS9150_REG_KEY_SCROLL_Y,
+		.reg_addr[IQS9150_REG_GRP_2F] = 0x1212,
+		.reg_size = sizeof(u16),
+		.label = "gesture distance",
+	},
+	{
+		.name = "azoteq,gesture-dist-rep",
+		.reg_key = IQS9150_REG_KEY_SCROLL_X,
+		.reg_addr[IQS9150_REG_GRP_2F] = 0x1214,
+		.reg_size = sizeof(u16),
+		.label = "repeated gesture distance",
+	},
+	{
+		.name = "azoteq,gesture-dist-rep",
+		.reg_key = IQS9150_REG_KEY_SCROLL_Y,
+		.reg_addr[IQS9150_REG_GRP_2F] = 0x1214,
+		.reg_size = sizeof(u16),
+		.label = "repeated gesture distance",
+	},
+	{
+		.name = "azoteq,thresh",
+		.reg_key = IQS9150_REG_KEY_PALM,
+		.reg_addr[IQS9150_REG_GRP_1F] = 0x1216,
+		.reg_size = sizeof(u16),
+		.val_max = IQS9150_NUM_CHANNELS,
+		.label = "threshold",
+	},
+	{
 		.name = "azoteq,channel-ignore",
 		.reg_key = IQS9150_REG_KEY_MASK,
 		.reg_addr[IQS9150_REG_GRP_TP] = 0x1246,
@@ -751,6 +1127,28 @@ static const struct iqs9150_prop_desc iqs9150_props[] = {
 	},
 };
 
+static const u8 iqs9150_gesture_angle[] = {
+	0x00, 0x01, 0x02, 0x03,
+	0x04, 0x06, 0x07, 0x08,
+	0x09, 0x0A, 0x0B, 0x0C,
+	0x0E, 0x0F, 0x10, 0x11,
+	0x12, 0x14, 0x15, 0x16,
+	0x17, 0x19, 0x1A, 0x1B,
+	0x1C, 0x1E, 0x1F, 0x21,
+	0x22, 0x23, 0x25, 0x26,
+	0x28, 0x2A, 0x2B, 0x2D,
+	0x2E, 0x30, 0x32, 0x34,
+	0x36, 0x38, 0x3A, 0x3C,
+	0x3E, 0x40, 0x42, 0x45,
+	0x47, 0x4A, 0x4C, 0x4F,
+	0x52, 0x55, 0x58, 0x5B,
+	0x5F, 0x63, 0x66, 0x6B,
+	0x6F, 0x73, 0x78, 0x7E,
+	0x83, 0x89, 0x90, 0x97,
+	0x9E, 0xA7, 0xB0, 0xBA,
+	0xC5, 0xD1, 0xDF, 0xEF,
+};
+
 struct iqs9150_ver_info {
 	__le16 prod_num;
 	__le16 major;
@@ -766,9 +1164,9 @@ struct iqs9150_touch_data {
 } __packed;
 
 struct iqs9150_status {
-	__le16 gest_flags[2];
-	__le16 info_flags;
-	__le16 tp_flags;
+	__le16 gesture_x;
+	__le16 gesture_y;
+	__le16 flags[4];
 	struct iqs9150_touch_data touch_data[IQS9150_MAX_CONTACTS];
 } __packed;
 
@@ -783,6 +1181,7 @@ struct iqs9150_private {
 	struct iqs9150_status status;
 	struct touchscreen_properties prop;
 	enum iqs9150_comms_mode comms_mode;
+	unsigned int kp_type[ARRAY_SIZE(iqs9150_kp_events)];
 	unsigned int kp_code[ARRAY_SIZE(iqs9150_kp_events)];
 	u8 reg_buf[IQS9150_REG_BUF_LEN];
 };
@@ -1084,7 +1483,9 @@ static int iqs9150_start_comms(struct iqs9150_private *iqs9150)
 		config &= ~IQS9150_CONFIG_FORCED_COMMS;
 
 	config &= ~IQS9150_CONFIG_EVENT_MASK;
-	config |= (IQS9150_CONFIG_EVENT_ATI | IQS9150_CONFIG_EVENT_MODE);
+	config |= (IQS9150_CONFIG_EVENT_MODE |
+		   IQS9150_CONFIG_EVENT_ATI |
+		   iqs9150_reg_grps[IQS9150_REG_GRP_TP].event_mask);
 
 	error = iqs9150_write_word(iqs9150, IQS9150_CONFIG, config);
 	if (error)
@@ -1095,9 +1496,21 @@ static int iqs9150_start_comms(struct iqs9150_private *iqs9150)
 	else
 		iqs9150->comms_mode = IQS9150_COMMS_MODE_FREE;
 
-	return iqs9150_read_burst(iqs9150, IQS9150_REG_BUF_START,
-				  &iqs9150_reg(IQS9150_REG_BUF_START),
-				  IQS9150_REG_BUF_LEN);
+	error = iqs9150_read_burst(iqs9150, IQS9150_REG_BUF_START,
+				   &iqs9150_reg(IQS9150_REG_BUF_START),
+				   IQS9150_REG_BUF_LEN);
+	if (error)
+		return error;
+
+	iqs9150_put_word(IQS9150_CONTROL, 0);
+
+	iqs9150_put_word(IQS9150_OTHER,
+			 iqs9150_get_word(IQS9150_OTHER) &
+			 ~IQS9150_OTHER_SW_ENABLE);
+
+	iqs9150_reg(IQS9150_ALP_SETUP) &= ~IQS9150_ALP_SETUP_ENABLE;
+
+	return 0;
 }
 
 static int iqs9150_init_device(struct iqs9150_private *iqs9150)
@@ -1192,6 +1605,86 @@ static int iqs9150_parse_props(struct iqs9150_private *iqs9150,
 		else
 			iqs9150_reg(reg_offs) = val_buf;
 	}
+
+	return 0;
+}
+
+static int iqs9150_parse_event(struct iqs9150_private *iqs9150,
+			       struct fwnode_handle *event_node,
+			       enum iqs9150_reg_grp_id reg_grp,
+			       enum iqs9150_reg_key_id reg_key,
+			       unsigned int index)
+{
+	struct i2c_client *client = iqs9150->client;
+	unsigned int val;
+	int error;
+
+	error = iqs9150_parse_props(iqs9150, event_node, reg_grp, reg_key, 0);
+	if (error)
+		return error;
+
+	if (reg_key == IQS9150_REG_KEY_AXIAL_X ||
+	    reg_key == IQS9150_REG_KEY_AXIAL_Y ||
+	    reg_key == IQS9150_REG_KEY_SCROLL_X ||
+	    reg_key == IQS9150_REG_KEY_SCROLL_Y) {
+		error = fwnode_property_read_u32(event_node,
+						 "azoteq,gesture-angle", &val);
+		if (!error) {
+			u16 reg_addr;
+
+			if (val >= ARRAY_SIZE(iqs9150_gesture_angle)) {
+				dev_err(&client->dev,
+					"Invalid %s gesture angle: %u\n",
+					fwnode_get_name(event_node), val);
+				return -EINVAL;
+			}
+
+			if (reg_key == IQS9150_REG_KEY_AXIAL_X ||
+			    reg_key == IQS9150_REG_KEY_AXIAL_Y)
+				reg_addr = IQS9150_ANGLE_AXIAL;
+			else
+				reg_addr = IQS9150_ANGLE_SCROLL;
+
+			iqs9150_reg(reg_addr) = iqs9150_gesture_angle[val];
+		} else if (error != -EINVAL) {
+			dev_err(&client->dev,
+				"Failed to read %s gesture angle: %d\n",
+				fwnode_get_name(event_node), error);
+			return error;
+		}
+	}
+
+	error = fwnode_property_read_u32(event_node, "linux,code", &val);
+	if (error == -EINVAL && reg_grp != IQS9150_REG_GRP_SW) {
+		return 0;
+	} else if (error) {
+		dev_err(&client->dev, "Failed to read %s code: %d\n",
+			fwnode_get_name(event_node), error);
+		return error;
+	}
+
+	iqs9150->kp_code[index] = val;
+
+	if (reg_grp == IQS9150_REG_GRP_SW) {
+		error = fwnode_property_read_u32(event_node,
+						 "linux,input-type", &val);
+		if (error == -EINVAL) {
+			val = EV_KEY;
+		} else if (error) {
+			dev_err(&client->dev,
+				"Failed to read %s input type: %d\n",
+				fwnode_get_name(event_node), error);
+			return error;
+		} else if (val != EV_KEY && val != EV_SW) {
+			dev_err(&client->dev, "Invalid %s input type: %u\n",
+				fwnode_get_name(event_node), val);
+			return -EINVAL;
+		}
+	} else {
+		val = EV_KEY;
+	}
+
+	iqs9150->kp_type[index] = val;
 
 	return 0;
 }
@@ -1371,7 +1864,7 @@ static int iqs9150_parse_alp(struct iqs9150_private *iqs9150,
 			fwnode_get_name(alp_node));
 		return -EINVAL;
 	} else if (count >= 0) {
-		unsigned int alp_setup, pins[IQS9150_NUM_RX];
+		unsigned int pins[IQS9150_NUM_RX];
 
 		error = fwnode_property_read_u32_array(alp_node,
 						       "azoteq,rx-enable",
@@ -1382,22 +1875,24 @@ static int iqs9150_parse_alp(struct iqs9150_private *iqs9150,
 			return error;
 		}
 
-		alp_setup = get_unaligned_le32(&iqs9150_reg(IQS9150_ALP_SETUP));
-
-		alp_setup &= ~GENMASK(dev_desc->num_rx - 1, 0);
-		alp_setup |= IQS9150_ALP_SETUP_ENABLE;
+		iqs9150_reg(IQS9150_ALP_SETUP) &= ~GENMASK((IQS9150_NUM_RX - 1) %
+							   BITS_PER_BYTE, 0);
+		memset(&iqs9150_reg(IQS9150_ALP_RX_ENABLE), 0,
+		       (IQS9150_NUM_RX - 1) / BITS_PER_BYTE);
 
 		for (i = 0; i < count; i++) {
+			u16 reg_offs = IQS9150_ALP_RX_ENABLE +
+				       pins[i] / BITS_PER_BYTE;
+			u8 bit_offs = pins[i] % BITS_PER_BYTE;
+
 			if (pins[i] > dev_desc->num_rx - 1) {
 				dev_err(&client->dev, "Invalid %s RX pin: %u\n",
 					fwnode_get_name(alp_node), pins[i]);
 				return -EINVAL;
 			}
 
-			alp_setup |= BIT(pins[i]);
+			iqs9150_reg(reg_offs) |= BIT(bit_offs);
 		}
-
-		put_unaligned_le32(alp_setup, &iqs9150_reg(IQS9150_ALP_SETUP));
 	}
 
 	count = fwnode_property_count_u32(alp_node, "azoteq,tx-enable");
@@ -1421,7 +1916,8 @@ static int iqs9150_parse_alp(struct iqs9150_private *iqs9150,
 			return error;
 		}
 
-		memset(&iqs9150_reg(IQS9150_ALP_TX_ENABLE), 0, 6);
+		memset(&iqs9150_reg(IQS9150_ALP_TX_ENABLE), 0,
+		       IQS9150_MAX_TX / BITS_PER_BYTE + 1);
 
 		for (i = 0; i < count; i++) {
 			u16 reg_offs = IQS9150_ALP_TX_ENABLE +
@@ -1460,6 +1956,8 @@ static int iqs9150_parse_alp(struct iqs9150_private *iqs9150,
 		}
 	}
 
+	iqs9150_reg(IQS9150_ALP_SETUP) |= IQS9150_ALP_SETUP_ENABLE;
+
 	return 0;
 }
 
@@ -1474,7 +1972,9 @@ static int iqs9150_parse_reg_grp(struct iqs9150_private *iqs9150,
 				 struct fwnode_handle *reg_grp_node,
 				 enum iqs9150_reg_grp_id reg_grp)
 {
-	int error;
+	u16 enable_addr = iqs9150_reg_grps[reg_grp].enable_addr;
+	u16 config = iqs9150_get_word(IQS9150_CONFIG);
+	int error, i;
 
 	error = iqs9150_parse_props(iqs9150, reg_grp_node, reg_grp,
 				    IQS9150_REG_KEY_NONE, 0);
@@ -1487,6 +1987,40 @@ static int iqs9150_parse_reg_grp(struct iqs9150_private *iqs9150,
 			return error;
 	}
 
+	for (i = 0; i < ARRAY_SIZE(iqs9150_kp_events); i++) {
+		const char *event_name = iqs9150_kp_events[i].name;
+		u16 enable_mask = iqs9150_kp_events[i].enable_mask;
+		struct fwnode_handle *event_node;
+
+		if (iqs9150_kp_events[i].reg_grp != reg_grp)
+			continue;
+
+		if (event_name)
+			event_node = fwnode_get_named_child_node(reg_grp_node,
+								 event_name);
+		else
+			event_node = fwnode_handle_get(reg_grp_node);
+
+		if (!event_node)
+			continue;
+
+		error = iqs9150_parse_event(iqs9150, event_node,
+					    iqs9150_kp_events[i].reg_grp,
+					    iqs9150_kp_events[i].reg_key, i);
+		fwnode_handle_put(event_node);
+		if (error)
+			return error;
+
+		if (enable_addr)
+			iqs9150_put_word(enable_addr,
+					 iqs9150_get_word(enable_addr) |
+					 enable_mask);
+
+		config |= iqs9150_reg_grps[reg_grp].event_mask;
+	}
+
+	iqs9150_put_word(IQS9150_CONFIG, config);
+
 	return 0;
 }
 
@@ -1498,7 +2032,7 @@ static int iqs9150_register_kp(struct iqs9150_private *iqs9150)
 	int error, i;
 
 	for (i = 0; i < ARRAY_SIZE(iqs9150_kp_events); i++)
-		if (iqs9150->kp_code[i])
+		if (iqs9150->kp_type[i])
 			break;
 
 	if (i == ARRAY_SIZE(iqs9150_kp_events))
@@ -1514,8 +2048,9 @@ static int iqs9150_register_kp(struct iqs9150_private *iqs9150)
 	kp_idev->id.bustype = BUS_I2C;
 
 	for (i = 0; i < ARRAY_SIZE(iqs9150_kp_events); i++)
-		if (iqs9150->kp_code[i])
-			input_set_capability(iqs9150->kp_idev, EV_KEY,
+		if (iqs9150->kp_type[i])
+			input_set_capability(iqs9150->kp_idev,
+					     iqs9150->kp_type[i],
 					     iqs9150->kp_code[i]);
 
 	error = input_register_device(kp_idev);
@@ -1532,17 +2067,7 @@ static int iqs9150_register_tp(struct iqs9150_private *iqs9150)
 	struct touchscreen_properties *prop = &iqs9150->prop;
 	struct input_dev *tp_idev = iqs9150->tp_idev;
 	struct i2c_client *client = iqs9150->client;
-	u8 *num_contacts = &iqs9150_reg(IQS9150_NUM_CONTACTS);
 	int error;
-
-	if (!*num_contacts) {
-		*num_contacts = IQS9150_MAX_CONTACTS;
-		return 0;
-	}
-
-	iqs9150_put_word(IQS9150_CONFIG,
-			 iqs9150_get_word(IQS9150_CONFIG) |
-			 IQS9150_CONFIG_EVENT_MOVE);
 
 	tp_idev = devm_input_allocate_device(&client->dev);
 	if (!tp_idev)
@@ -1576,7 +2101,8 @@ static int iqs9150_register_tp(struct iqs9150_private *iqs9150)
 	iqs9150_put_word(IQS9150_X_RES, prop->max_x);
 	iqs9150_put_word(IQS9150_Y_RES, prop->max_y);
 
-	error = input_mt_init_slots(tp_idev, *num_contacts, INPUT_MT_DIRECT);
+	error = input_mt_init_slots(tp_idev, iqs9150_reg(IQS9150_NUM_CONTACTS),
+				    INPUT_MT_DIRECT);
 	if (error) {
 		dev_err(&client->dev, "Failed to initialize slots: %d\n",
 			error);
@@ -1595,17 +2121,20 @@ static int iqs9150_report(struct iqs9150_private *iqs9150)
 {
 	struct iqs9150_status *status = &iqs9150->status;
 	struct i2c_client *client = iqs9150->client;
-	u16 info_flags;
+	u16 gesture_x, gesture_y, info;
 	int error, i;
 
-	error = iqs9150_read_burst(iqs9150, IQS9150_GESTURES, status,
+	error = iqs9150_read_burst(iqs9150, IQS9150_STATUS, status,
 				   sizeof(*status));
 	if (error)
 		return error;
 
-	info_flags = le16_to_cpu(status->info_flags);
+	gesture_x = le16_to_cpu(status->gesture_x);
+	gesture_y = le16_to_cpu(status->gesture_y);
 
-	if (info_flags & IQS9150_INFO_SHOW_RESET) {
+	info = le16_to_cpu(status->flags[2]);
+
+	if (info & IQS9150_INFO_SHOW_RESET) {
 		enum iqs9150_comms_mode comms_mode = iqs9150->comms_mode;
 		u16 config = iqs9150_get_word(IQS9150_CONFIG);
 
@@ -1627,13 +2156,13 @@ static int iqs9150_report(struct iqs9150_private *iqs9150)
 		return iqs9150_init_device(iqs9150);
 	}
 
-	if (info_flags & IQS9150_INFO_TP_ATI_ERROR) {
+	if (info & IQS9150_INFO_TP_ATI_ERROR) {
 		dev_err(&client->dev, "Unexpected %s ATI error\n",
-			iqs9150_reg_grp_names[IQS9150_REG_GRP_TP]);
-	} else if (info_flags & IQS9150_INFO_TP_ATI_AGAIN) {
+			iqs9150_reg_grps[IQS9150_REG_GRP_TP].name);
+	} else if (info & IQS9150_INFO_TP_ATI_AGAIN) {
 		dev_dbg(&client->dev, "New %s ATI occurrence\n",
-			iqs9150_reg_grp_names[IQS9150_REG_GRP_TP]);
-	} else if (iqs9150->tp_idev) {
+			iqs9150_reg_grps[IQS9150_REG_GRP_TP].name);
+	} else {
 		for (i = 0; i < iqs9150_reg(IQS9150_NUM_CONTACTS); i++) {
 			u16 abs_x = le16_to_cpu(status->touch_data[i].abs_x);
 			u16 abs_y = le16_to_cpu(status->touch_data[i].abs_y);
@@ -1655,10 +2184,73 @@ static int iqs9150_report(struct iqs9150_private *iqs9150)
 		input_sync(iqs9150->tp_idev);
 	}
 
-	if (!iqs9150->kp_idev)
-		return 0;
+	if (info & IQS9150_INFO_ALP_ATI_ERROR)
+		dev_err(&client->dev, "Unexpected %s ATI error\n",
+			iqs9150_reg_grps[IQS9150_REG_GRP_ALP].name);
+	else if (info & IQS9150_INFO_ALP_ATI_AGAIN)
+		dev_dbg(&client->dev, "New %s ATI occurrence\n",
+			iqs9150_reg_grps[IQS9150_REG_GRP_ALP].name);
 
-	input_sync(iqs9150->kp_idev);
+	if (iqs9150->kp_idev) {
+		bool flush = false;
+
+		for (i = 0; i < ARRAY_SIZE(iqs9150_kp_events); i++) {
+			enum iqs9150_reg_grp_id reg_grp =
+			     iqs9150_kp_events[i].reg_grp;
+			enum iqs9150_reg_key_id reg_key =
+			     iqs9150_kp_events[i].reg_key;
+			int status_offs = iqs9150_reg_grps[reg_grp].status_offs;
+			u16 status_mask = iqs9150_kp_events[i].status_mask;
+			u16 travel_mask = iqs9150_kp_events[i].travel_mask;
+			u16 flags = le16_to_cpu(status->flags[status_offs]);
+
+			if (!iqs9150->kp_type[i])
+				continue;
+
+			if (info & iqs9150_reg_grps[reg_grp].ati_mask)
+				continue;
+
+			if (reg_grp == IQS9150_REG_GRP_ALP &&
+			    (info & IQS9150_INFO_CHARGE_MODE) <
+				    IQS9150_INFO_CHARGE_MODE_LP1)
+				continue;
+
+			if ((reg_key == IQS9150_REG_KEY_SCROLL_X &&
+			    (gesture_x & BIT(15)) ^ travel_mask) ||
+			    (reg_key == IQS9150_REG_KEY_SCROLL_Y &&
+			    (gesture_y & BIT(15)) ^ travel_mask))
+				continue;
+
+			input_event(iqs9150->kp_idev, iqs9150->kp_type[i],
+				    iqs9150->kp_code[i], !!(flags & status_mask));
+
+			if (reg_key != IQS9150_REG_KEY_HOLD &&
+			    reg_key != IQS9150_REG_KEY_PALM)
+				flush |= flags & status_mask;
+		}
+
+		/*
+		 * Hold and palm gestures persist while the contact remains in
+		 * place; all others are momentary and hence are followed by a
+		 * complementary release event.
+		 */
+		if (flush) {
+			input_sync(iqs9150->kp_idev);
+
+			for (i = 0; i < ARRAY_SIZE(iqs9150_kp_events); i++) {
+				enum iqs9150_reg_key_id reg_key =
+				     iqs9150_kp_events[i].reg_key;
+
+				if (reg_key != IQS9150_REG_KEY_HOLD &&
+				    reg_key != IQS9150_REG_KEY_PALM)
+					input_event(iqs9150->kp_idev,
+						    iqs9150->kp_type[i],
+						    iqs9150->kp_code[i], 0);
+			}
+		}
+
+		input_sync(iqs9150->kp_idev);
+	}
 
 	return 0;
 }
@@ -1792,7 +2384,7 @@ static int iqs9150_probe(struct i2c_client *client)
 		return error;
 
 	for (reg_grp = 0; reg_grp < IQS9150_NUM_REG_GRPS; reg_grp++) {
-		const char *reg_grp_name = iqs9150_reg_grp_names[reg_grp];
+		const char *reg_grp_name = iqs9150_reg_grps[reg_grp].name;
 		struct fwnode_handle *reg_grp_node;
 
 		if (reg_grp_name)
@@ -1810,11 +2402,11 @@ static int iqs9150_probe(struct i2c_client *client)
 			return error;
 	}
 
-	error = iqs9150_register_kp(iqs9150);
+	error = iqs9150_register_tp(iqs9150);
 	if (error)
 		return error;
 
-	error = iqs9150_register_tp(iqs9150);
+	error = iqs9150_register_kp(iqs9150);
 	if (error)
 		return error;
 
