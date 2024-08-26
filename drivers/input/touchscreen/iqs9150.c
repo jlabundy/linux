@@ -21,6 +21,7 @@
 #include <linux/module.h>
 #include <linux/of_device.h>
 #include <linux/property.h>
+#include <linux/regulator/consumer.h>
 #include <linux/slab.h>
 #include <asm/unaligned.h>
 
@@ -1209,6 +1210,13 @@ static int iqs9150_hard_reset(struct iqs9150_private *iqs9150)
 	return iqs9150_irq_poll(iqs9150, IQS9150_START_TIMEOUT_US);
 }
 
+static void iqs9150_hold_reset(void *data)
+{
+	struct iqs9150_private *iqs9150 = data;
+
+	gpiod_set_value_cansleep(iqs9150->reset_gpio, 1);
+}
+
 static int iqs9150_force_comms(struct iqs9150_private *iqs9150)
 {
 	u8 msg_buf[] = { 0xFF, };
@@ -2378,6 +2386,18 @@ static int iqs9150_probe(struct i2c_client *client)
 			error);
 		return error;
 	}
+
+	error = devm_regulator_get_enable(&client->dev, "vdd");
+	if (error) {
+		dev_err(&client->dev, "Failed to request VDD regulator: %d\n",
+			error);
+		return error;
+	}
+
+	error = devm_add_action_or_reset(&client->dev, iqs9150_hold_reset,
+					 iqs9150);
+	if (error)
+		return error;
 
 	error = iqs9150_start_comms(iqs9150);
 	if (error)
