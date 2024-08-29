@@ -42,6 +42,8 @@
 #define IQS9150_SETTINGS_MINOR			0x1178
 #define IQS9150_SETTINGS_MAJOR			0x1179
 
+#define IQS9150_TIMEOUT_COMMS			0x11B8
+
 #define IQS9150_CONTROL				0x11BC
 #define IQS9150_CONTROL_SUSPEND			BIT(11)
 #define IQS9150_CONTROL_ACK_RESET		BIT(7)
@@ -79,7 +81,7 @@
 #define IQS9150_START_TIMEOUT_US		(1 * USEC_PER_SEC)
 
 #define IQS9150_NUM_RETRIES			5
-#define IQS9150_MAX_LEN				256
+#define IQS9150_MAX_LEN				PAGE_SIZE
 
 #define IQS9150_NUM_RX				26
 #define IQS9150_NUM_TX				22
@@ -602,12 +604,6 @@ static const struct iqs9150_prop_desc iqs9150_props[] = {
 		.val_pitch = 1000,
 		.val_max = 60000,
 		.label = "trackpad reference value update rate",
-	},
-	{
-		.name = "azoteq,timeout-comms-ms",
-		.reg_addr[IQS9150_REG_GRP_SYS] = 0x11B8,
-		.reg_size = sizeof(u16),
-		.label = "communication timeout",
 	},
 	{
 		.name = "azoteq,timeout-snap-ms",
@@ -1447,9 +1443,35 @@ static int iqs9150_start_comms(struct iqs9150_private *iqs9150)
 {
 	const struct iqs9150_dev_desc *dev_desc = iqs9150->dev_desc;
 	struct i2c_client *client = iqs9150->client;
+	unsigned int timeout_comms = 0;
 	bool forced_comms;
 	u16 config;
 	int error;
+
+	/*
+	 * Until forced communication can be enabled, the host must wait for a
+	 * communication window each time it intends to elicit a response from
+	 * the device.
+	 *
+	 * Forced communication is not necessary, however, if the host adapter
+	 * can support clock stretching. In that case, the device freely clock
+	 * stretches until all pending conversions are complete.
+	 */
+	forced_comms = device_property_present(&client->dev,
+					       "azoteq,forced-comms");
+
+	error = device_property_read_u32(&client->dev,
+					 "azoteq,timeout-comms-ms",
+					 &timeout_comms);
+	if (error && error != -EINVAL) {
+		dev_err(&client->dev,
+			"Failed to read communication timeout: %d\n", error);
+		return error;
+	} else if (timeout_comms > U16_MAX) {
+		dev_err(&client->dev,
+			"Invalid communication timeout: %u\n", timeout_comms);
+		return -EINVAL;
+	}
 
 	error = iqs9150_hard_reset(iqs9150);
 	if (error) {
@@ -1473,18 +1495,6 @@ static int iqs9150_start_comms(struct iqs9150_private *iqs9150)
 	if (error)
 		return error;
 
-	/*
-	 * Until forced communication can be enabled, the host must wait for a
-	 * communication window each time it intends to elicit a response from
-	 * the device.
-	 *
-	 * Forced communication is not necessary, however, if the host adapter
-	 * can support clock stretching. In that case, the device freely clock
-	 * stretches until all pending conversions are complete.
-	 */
-	forced_comms = device_property_present(&client->dev,
-					       "azoteq,forced-comms");
-
 	if (forced_comms)
 		config |= IQS9150_CONFIG_FORCED_COMMS;
 	else
@@ -1503,6 +1513,13 @@ static int iqs9150_start_comms(struct iqs9150_private *iqs9150)
 		iqs9150->comms_mode = IQS9150_COMMS_MODE_FORCE;
 	else
 		iqs9150->comms_mode = IQS9150_COMMS_MODE_FREE;
+
+	if (timeout_comms) {
+		error = iqs9150_write_word(iqs9150, IQS9150_TIMEOUT_COMMS,
+					   timeout_comms);
+		if (error)
+			return error;
+	}
 
 	error = iqs9150_read_burst(iqs9150, IQS9150_REG_BUF_START,
 				   &iqs9150_reg(IQS9150_REG_BUF_START),
@@ -1534,15 +1551,24 @@ static int iqs9150_init_device(struct iqs9150_private *iqs9150)
 	if (error)
 		return error;
 
+	error = iqs9150_write_word(iqs9150, IQS9150_TIMEOUT_COMMS,
+				   iqs9150_get_word(IQS9150_TIMEOUT_COMMS));
+	if (error)
+		return error;
+
 	error = iqs9150_write_burst(iqs9150, IQS9150_REG_BUF_START,
 				    &iqs9150_reg(IQS9150_REG_BUF_START),
 				    IQS9150_REG_BUF_LEN);
 	if (error)
 		return error;
 
-	return iqs9150_write_word(iqs9150, IQS9150_CONTROL,
-				  IQS9150_CONTROL_ATI_ALP |
-				  IQS9150_CONTROL_ATI_TP);
+	error = iqs9150_write_word(iqs9150, IQS9150_CONTROL,
+				   IQS9150_CONTROL_ATI_ALP |
+				   IQS9150_CONTROL_ATI_TP);
+	if (error)
+		return error;
+
+	return 0;
 }
 
 static int iqs9150_parse_props(struct iqs9150_private *iqs9150,
@@ -2144,7 +2170,6 @@ static int iqs9150_report(struct iqs9150_private *iqs9150)
 
 	if (info & IQS9150_INFO_SHOW_RESET) {
 		enum iqs9150_comms_mode comms_mode = iqs9150->comms_mode;
-		u16 config = iqs9150_get_word(IQS9150_CONFIG);
 
 		dev_err(&client->dev, "Unexpected device reset\n");
 
@@ -2155,7 +2180,8 @@ static int iqs9150_report(struct iqs9150_private *iqs9150)
 		 */
 		iqs9150->comms_mode = IQS9150_COMMS_MODE_WAIT;
 
-		error = iqs9150_write_word(iqs9150, IQS9150_CONFIG, config);
+		error = iqs9150_write_word(iqs9150, IQS9150_CONFIG,
+					   iqs9150_get_word(IQS9150_CONFIG));
 		if (error)
 			return error;
 
