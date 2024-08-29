@@ -19,10 +19,12 @@
 				compatible = "azoteq,iqs9150";
 				reg = <0x56>;
 				irq-gpios = <&gpio 4 GPIO_ACTIVE_LOW>;
+				vdd-supply = <&vdd_3v3_reg>;
 				pinctrl-names = "default";
 				pinctrl-0 = <&iqs9150_pins>;
 				touchscreen-max-pressure = <4095>;
 				azoteq,forced-comms;
+				azoteq,timeout-comms-ms = <1000>;
 
 				gesture-single {
 					event-tap {
