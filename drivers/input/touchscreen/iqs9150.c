@@ -74,6 +74,9 @@
 #define IQS9150_ANGLE_SCROLL			0x120D
 #define IQS9150_RX_TX_MAP			0x1218
 
+#define IQS9150_ENG_BUF_START			0x2000
+#define IQS9150_ENG_BUF_LEN			6
+
 #define IQS9150_COMMS_ERROR			0xEEEE
 #define IQS9150_COMMS_RETRY_MS			50
 #define IQS9150_COMMS_SLEEP_US			100
@@ -429,6 +432,16 @@ static const struct iqs9150_prop_desc iqs9150_props[] = {
 		.label = "ATI compensation selection",
 	},
 	{
+		.name = "azoteq,exp-settings-minor",
+		.reg_addr[IQS9150_REG_GRP_SYS] = IQS9150_SETTINGS_MINOR,
+		.label = "exported settings minor version",
+	},
+	{
+		.name = "azoteq,exp-settings-major",
+		.reg_addr[IQS9150_REG_GRP_SYS] = IQS9150_SETTINGS_MAJOR,
+		.label = "exported settings major version",
+	},
+	{
 		.name = "azoteq,ati-frac-mult-fine",
 		.reg_key = IQS9150_REG_KEY_SPAN,
 		.reg_addr = {
@@ -612,12 +625,28 @@ static const struct iqs9150_prop_desc iqs9150_props[] = {
 		.label = "snap timeout",
 	},
 	{
+		.name = "azoteq,sleep-conv",
+		.reg_addr[IQS9150_REG_GRP_SYS] = IQS9150_CONFIG,
+		.reg_size = sizeof(u16),
+		.reg_shift = 5,
+		.reg_width = 1,
+		.label = "processing during conversions disable state",
+	},
+	{
 		.name = "azoteq,ati-mode",
 		.reg_addr[IQS9150_REG_GRP_ALP] = IQS9150_CONFIG,
 		.reg_size = sizeof(u16),
 		.reg_shift = 1,
 		.reg_width = 1,
 		.label = "ATI mode",
+	},
+	{
+		.name = "azoteq,sleep-mode",
+		.reg_addr[IQS9150_REG_GRP_SYS] = IQS9150_CONFIG,
+		.reg_size = sizeof(u16),
+		.reg_shift = 0,
+		.reg_width = 1,
+		.label = "sleep mode",
 	},
 	{
 		.name = "azoteq,pin-polarity",
@@ -1181,6 +1210,7 @@ struct iqs9150_private {
 	unsigned int kp_type[ARRAY_SIZE(iqs9150_kp_events)];
 	unsigned int kp_code[ARRAY_SIZE(iqs9150_kp_events)];
 	u8 reg_buf[IQS9150_REG_BUF_LEN];
+	u8 eng_buf[IQS9150_ENG_BUF_LEN];
 };
 
 static int iqs9150_irq_poll(struct iqs9150_private *iqs9150, u64 timeout_us)
@@ -1561,6 +1591,14 @@ static int iqs9150_init_device(struct iqs9150_private *iqs9150)
 				    IQS9150_REG_BUF_LEN);
 	if (error)
 		return error;
+
+	if (get_unaligned_le16(iqs9150->eng_buf) != IQS9150_COMMS_ERROR) {
+		error = iqs9150_write_burst(iqs9150, IQS9150_ENG_BUF_START,
+					    iqs9150->eng_buf,
+					    IQS9150_ENG_BUF_LEN);
+		if (error)
+			return error;
+	}
 
 	error = iqs9150_write_word(iqs9150, IQS9150_CONTROL,
 				   IQS9150_CONTROL_ATI_ALP |
@@ -1995,11 +2033,66 @@ static int iqs9150_parse_alp(struct iqs9150_private *iqs9150,
 	return 0;
 }
 
+static int iqs9150_parse_sys(struct iqs9150_private *iqs9150,
+			     struct fwnode_handle *sys_node)
+{
+	struct i2c_client *client = iqs9150->client;
+	int error, count, i;
+
+	put_unaligned_le16(IQS9150_COMMS_ERROR, iqs9150->eng_buf);
+
+	count = fwnode_property_count_u32(sys_node, "azoteq,eng-settings");
+	if (count < 0 && count != -EINVAL) {
+		dev_err(&client->dev,
+			"Failed to count %s engineering settings: %d\n",
+			fwnode_get_name(sys_node), count);
+		return count;
+	} else if (count != IQS9150_ENG_BUF_LEN && count != -EINVAL) {
+		dev_err(&client->dev,
+			"Invalid number of %s engineering settings\n",
+			fwnode_get_name(sys_node));
+		return -EINVAL;
+	} else if (count == IQS9150_ENG_BUF_LEN) {
+		unsigned int val[IQS9150_ENG_BUF_LEN];
+
+		error = fwnode_property_read_u32_array(sys_node,
+						       "azoteq,eng-settings",
+						       val, count);
+		if (error) {
+			dev_err(&client->dev,
+				"Failed to read %s engineering settings: %d\n",
+				fwnode_get_name(sys_node), error);
+			return error;
+		}
+
+		for (i = 0; i < count; i++) {
+			if (val[i] > U8_MAX) {
+				dev_err(&client->dev,
+					"Invalid %s engineering setting: %u\n",
+					fwnode_get_name(sys_node), val[i]);
+				return -EINVAL;
+			}
+
+			iqs9150->eng_buf[i] = val[i];
+		}
+
+		if (get_unaligned_le16(iqs9150->eng_buf) == IQS9150_COMMS_ERROR) {
+			dev_err(&client->dev,
+				"Invalid %s engineering settings\n",
+				fwnode_get_name(sys_node));
+			return -EINVAL;
+		}
+	}
+
+	return 0;
+}
+
 static int (*iqs9150_parse_extra[IQS9150_NUM_REG_GRPS])
 				(struct iqs9150_private *iqs9150,
 				 struct fwnode_handle *reg_grp_node) = {
 	[IQS9150_REG_GRP_TP] = iqs9150_parse_tp,
 	[IQS9150_REG_GRP_ALP] = iqs9150_parse_alp,
+	[IQS9150_REG_GRP_SYS] = iqs9150_parse_sys,
 };
 
 static int iqs9150_parse_reg_grp(struct iqs9150_private *iqs9150,
