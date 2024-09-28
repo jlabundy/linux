@@ -633,7 +633,7 @@ static const struct iqs9150_prop_desc iqs9150_props[] = {
 		.reg_size = sizeof(u16),
 		.reg_shift = 12,
 		.reg_width = 2,
-		.label = "core clock frequency trim",
+		.label = "sensing engine oscillator frequency trim",
 	},
 	{
 		.name = "azoteq,fosc-freq",
@@ -642,7 +642,7 @@ static const struct iqs9150_prop_desc iqs9150_props[] = {
 		.reg_shift = 6,
 		.reg_width = 2,
 		.val_max = 3,
-		.label = "core clock frequency selection",
+		.label = "main oscillator frequency",
 	},
 	{
 		.name = "azoteq,auto-prox-lp2",
