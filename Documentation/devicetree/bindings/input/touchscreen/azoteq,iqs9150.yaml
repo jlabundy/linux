@@ -140,6 +140,22 @@ properties:
       Specifies the length of time (in ms) to wait for a snap to be released
       before the trackpad is reseeded.
 
+  azoteq,sleep-conv:
+    $ref: /schemas/types.yaml#/definitions/uint32
+    enum: [0, 1]
+    description: |
+      Specifies whether processing takes place during conversions as follows:
+      0: Enabled
+      1: Disabled (i.e. sleep during conversions)
+
+  azoteq,sleep-mode:
+    $ref: /schemas/types.yaml#/definitions/uint32
+    enum: [0, 1]
+    description: |
+      Specifies the severity of sleep in between reporting periods as follows:
+      0: Deep
+      1: Light
+
   azoteq,fosc-trim:
     $ref: /schemas/types.yaml#/definitions/uint32
     enum: [0, 1, 2, 3]
@@ -158,6 +174,29 @@ properties:
       0: 14 MHz
       1: 20 MHz
       2: 24 MHz
+
+  azoteq,exp-settings-major:
+    $ref: /schemas/types.yaml#/definitions/uint32
+    minimum: 0
+    maximum: 255
+    description: Specifies the exported settings major version.
+
+  azoteq,exp-settings-minor:
+    $ref: /schemas/types.yaml#/definitions/uint32
+    minimum: 0
+    maximum: 255
+    description: Specifies the exported settings minor version.
+
+  azoteq,eng-settings:
+    $ref: /schemas/types.yaml#/definitions/uint32-array
+    minItems: 6
+    maxItems: 6
+    items:
+      minimum: 0
+      maximum: 255
+    description:
+      Specifies the data to be written to the engineering settings register
+      space, if applicable.
 
   trackpad:
     type: object
