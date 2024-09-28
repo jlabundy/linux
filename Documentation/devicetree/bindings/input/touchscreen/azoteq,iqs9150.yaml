@@ -144,17 +144,17 @@ properties:
     $ref: /schemas/types.yaml#/definitions/uint32
     enum: [0, 1, 2, 3]
     description: |
-      Specifies the device's core clock frequency trim as follows:
-      0: Nominal
-      1: -10% (14 MHz) or -20% (20/24 MHz)
-      2: -20% (14 MHz) or -30% (20/24 MHz)
-      3: -30% (14 MHz) or -40% (20/24 MHz)
+      Specifies the sensing engine oscillator frequency trim as follows:
+      0: Nominal (16 MHz)
+      1: -10% (main oscillator = 14 MHz) or -20% (main oscillator = 20/24 MHz)
+      2: -20% (main oscillator = 14 MHz) or -30% (main oscillator = 20/24 MHz)
+      3: -30% (main oscillator = 14 MHz) or -40% (main oscillator = 20/24 MHz)
 
   azoteq,fosc-freq:
     $ref: /schemas/types.yaml#/definitions/uint32
     enum: [0, 1, 2]
     description: |
-      Specifies the device's core clock frequency as follows:
+      Specifies the main oscillator frequency as follows:
       0: 14 MHz
       1: 20 MHz
       2: 24 MHz
