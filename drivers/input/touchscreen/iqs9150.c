@@ -2006,8 +2006,7 @@ static int iqs9150_parse_reg_grp(struct iqs9150_private *iqs9150,
 				 struct fwnode_handle *reg_grp_node,
 				 enum iqs9150_reg_grp_id reg_grp)
 {
-	u16 enable_addr = iqs9150_reg_grps[reg_grp].enable_addr;
-	u16 config = iqs9150_get_word(IQS9150_CONFIG);
+	u16 enable_addr = iqs9150_reg_grps[reg_grp].enable_addr, config;
 	int error, i;
 
 	error = iqs9150_parse_props(iqs9150, reg_grp_node, reg_grp,
@@ -2020,6 +2019,8 @@ static int iqs9150_parse_reg_grp(struct iqs9150_private *iqs9150,
 		if (error)
 			return error;
 	}
+
+	config = iqs9150_get_word(IQS9150_CONFIG);
 
 	for (i = 0; i < ARRAY_SIZE(iqs9150_kp_events); i++) {
 		const char *event_name = iqs9150_kp_events[i].name;
@@ -2044,6 +2045,9 @@ static int iqs9150_parse_reg_grp(struct iqs9150_private *iqs9150,
 		fwnode_handle_put(event_node);
 		if (error)
 			return error;
+
+		if (!iqs9150->kp_type[i])
+			continue;
 
 		if (enable_addr)
 			iqs9150_put_word(enable_addr,
