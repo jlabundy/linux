@@ -23,11 +23,13 @@
 #include <linux/property.h>
 #include <linux/regulator/consumer.h>
 #include <linux/slab.h>
+#include <linux/workqueue.h>
 #include <asm/unaligned.h>
 
 #define IQS9150_PROD_NUM			0x1000
 #define IQS9150_STATUS				0x1018
 
+#define IQS9150_INFO_GLOBAL_TOUCH		BIT(9)
 #define IQS9150_INFO_SHOW_RESET			BIT(7)
 #define IQS9150_INFO_ALP_ATI_AGAIN		BIT(6)
 #define IQS9150_INFO_ALP_ATI_ERROR		BIT(5)
@@ -42,6 +44,7 @@
 #define IQS9150_SETTINGS_MINOR			0x1178
 #define IQS9150_SETTINGS_MAJOR			0x1179
 
+#define IQS9150_RATE_IDLE_TOUCH			0x11A4
 #define IQS9150_TIMEOUT_COMMS			0x11B8
 
 #define IQS9150_CONTROL				0x11BC
@@ -548,7 +551,7 @@ static const struct iqs9150_prop_desc iqs9150_props[] = {
 	},
 	{
 		.name = "azoteq,rate-touch-ms",
-		.reg_addr[IQS9150_REG_GRP_SYS] = 0x11A4,
+		.reg_addr[IQS9150_REG_GRP_SYS] = IQS9150_RATE_IDLE_TOUCH,
 		.reg_size = sizeof(u16),
 		.label = "idle-touch mode report rate",
 	},
@@ -1203,6 +1206,7 @@ struct iqs9150_private {
 	struct i2c_client *client;
 	struct input_dev *tp_idev;
 	struct input_dev *kp_idev;
+	struct delayed_work kp_work;
 	struct iqs9150_ver_info ver_info;
 	struct iqs9150_status status;
 	struct touchscreen_properties prop;
@@ -2248,12 +2252,42 @@ static int iqs9150_register_tp(struct iqs9150_private *iqs9150)
 	return error;
 }
 
+static void iqs9150_kp_worker(struct work_struct *work)
+{
+	struct iqs9150_private *iqs9150 = container_of(work,
+						       struct iqs9150_private,
+						       kp_work.work);
+	int i;
+
+	for (i = 0; i < ARRAY_SIZE(iqs9150_kp_events); i++) {
+		if (!iqs9150->kp_type[i])
+			continue;
+
+		if (iqs9150_kp_events[i].reg_grp == IQS9150_REG_GRP_SW)
+			continue;
+
+		input_event(iqs9150->kp_idev, iqs9150->kp_type[i],
+			    iqs9150->kp_code[i], 0);
+	}
+
+	input_sync(iqs9150->kp_idev);
+}
+
+static void iqs9150_kp_cancel(void *data)
+{
+	struct iqs9150_private *iqs9150 = data;
+
+	cancel_delayed_work_sync(&iqs9150->kp_work);
+}
+
 static int iqs9150_report(struct iqs9150_private *iqs9150)
 {
 	struct iqs9150_status *status = &iqs9150->status;
 	struct i2c_client *client = iqs9150->client;
 	u16 gesture_x, gesture_y, info;
 	int error, i;
+
+	cancel_delayed_work_sync(&iqs9150->kp_work);
 
 	error = iqs9150_read_burst(iqs9150, IQS9150_STATUS, status,
 				   sizeof(*status));
@@ -2323,7 +2357,7 @@ static int iqs9150_report(struct iqs9150_private *iqs9150)
 			iqs9150_reg_grps[IQS9150_REG_GRP_ALP].name);
 
 	if (iqs9150->kp_idev) {
-		bool flush = false;
+		bool flush = false, queue = false;
 
 		for (i = 0; i < ARRAY_SIZE(iqs9150_kp_events); i++) {
 			enum iqs9150_reg_grp_id reg_grp =
@@ -2352,12 +2386,19 @@ static int iqs9150_report(struct iqs9150_private *iqs9150)
 			    (gesture_y & BIT(15)) ^ travel_mask))
 				continue;
 
+			if (reg_key != IQS9150_REG_KEY_HOLD &&
+			    reg_key != IQS9150_REG_KEY_PALM) {
+				flush |= flags & status_mask;
+			} else if (reg_grp != IQS9150_REG_GRP_SW) {
+				if (flags & status_mask &&
+				   !(info & IQS9150_INFO_GLOBAL_TOUCH))
+					continue;
+
+				queue |= flags & status_mask;
+			}
+
 			input_event(iqs9150->kp_idev, iqs9150->kp_type[i],
 				    iqs9150->kp_code[i], !!(flags & status_mask));
-
-			if (reg_key != IQS9150_REG_KEY_HOLD &&
-			    reg_key != IQS9150_REG_KEY_PALM)
-				flush |= flags & status_mask;
 		}
 
 		/*
@@ -2381,6 +2422,15 @@ static int iqs9150_report(struct iqs9150_private *iqs9150)
 		}
 
 		input_sync(iqs9150->kp_idev);
+
+		if (queue) {
+			unsigned int timeout_ms =
+				     IQS9150_NUM_RETRIES *
+				     iqs9150_get_word(IQS9150_RATE_IDLE_TOUCH);
+
+			schedule_delayed_work(&iqs9150->kp_work,
+					      msecs_to_jiffies(timeout_ms));
+		}
 	}
 
 	return 0;
@@ -2550,6 +2600,13 @@ static int iqs9150_probe(struct i2c_client *client)
 		return error;
 
 	error = iqs9150_register_kp(iqs9150);
+	if (error)
+		return error;
+
+	INIT_DELAYED_WORK(&iqs9150->kp_work, iqs9150_kp_worker);
+
+	error = devm_add_action_or_reset(&client->dev, iqs9150_kp_cancel,
+					 iqs9150);
 	if (error)
 		return error;
 
