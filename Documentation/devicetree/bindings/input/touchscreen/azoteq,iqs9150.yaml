@@ -1080,22 +1080,12 @@ allOf:
               items:
                 maximum: 12
 
-            azoteq,tx-enable:
-              maxItems: 12
-              items:
-                minimum: 33
-
         alp:
           properties:
             azoteq,rx-enable:
               maxItems: 13
               items:
                 maximum: 12
-
-            azoteq,tx-enable:
-              maxItems: 12
-              items:
-                minimum: 33
 
 examples:
   - |
