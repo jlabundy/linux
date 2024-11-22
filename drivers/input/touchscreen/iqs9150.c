@@ -376,8 +376,7 @@ struct iqs9150_dev_desc {
 	const char *tp_name;
 	const char *kp_name;
 	u16 prod_num;
-	int num_rx;
-	int num_tx;
+	int max_rx;
 	int min_tx;
 };
 
@@ -386,15 +385,14 @@ static const struct iqs9150_dev_desc iqs9150_devs[] = {
 		.tp_name = "iqs9150_trackpad",
 		.kp_name = "iqs9150_keys",
 		.prod_num = 0x076A,
-		.num_rx = IQS9150_NUM_RX,
-		.num_tx = IQS9150_NUM_TX,
+		.max_rx = IQS9150_NUM_RX - 1,
+		.min_tx = IQS9150_NUM_RX,
 	},
 	[IQS9151] = {
 		.tp_name = "iqs9151_trackpad",
 		.kp_name = "iqs9151_keys",
 		.prod_num = 0x09BC,
-		.num_rx = 13,
-		.num_tx = 12,
+		.max_rx = IQS9150_NUM_RX / 2 - 1,
 		.min_tx = 33,
 	},
 };
@@ -1780,7 +1778,7 @@ static int iqs9150_parse_tp(struct iqs9150_private *iqs9150,
 		dev_err(&client->dev, "Failed to count %s RX pins: %d\n",
 			fwnode_get_name(tp_node), total_rx);
 		return total_rx;
-	} else if (total_rx > dev_desc->num_rx) {
+	} else if (total_rx > dev_desc->max_rx + 1) {
 		dev_err(&client->dev, "Invalid number of %s RX pins\n",
 			fwnode_get_name(tp_node));
 		return -EINVAL;
@@ -1795,7 +1793,7 @@ static int iqs9150_parse_tp(struct iqs9150_private *iqs9150,
 	}
 
 	for (i = 0; i < total_rx; i++) {
-		if (pins[i] > dev_desc->num_rx - 1) {
+		if (pins[i] > dev_desc->max_rx) {
 			dev_err(&client->dev, "Invalid %s RX pin: %u\n",
 				fwnode_get_name(tp_node), pins[i]);
 			return -EINVAL;
@@ -1809,7 +1807,7 @@ static int iqs9150_parse_tp(struct iqs9150_private *iqs9150,
 		dev_err(&client->dev, "Failed to count %s TX pins: %d\n",
 			fwnode_get_name(tp_node), total_tx);
 		return total_tx;
-	} else if (total_tx > dev_desc->num_tx) {
+	} else if (total_tx > IQS9150_NUM_TX) {
 		dev_err(&client->dev, "Invalid number of %s TX pins\n",
 			fwnode_get_name(tp_node));
 		return -EINVAL;
@@ -1824,8 +1822,9 @@ static int iqs9150_parse_tp(struct iqs9150_private *iqs9150,
 	}
 
 	for (i = 0; i < total_tx; i++) {
-		if (pins[i] > IQS9150_MAX_TX || pins[i] == IQS9150_RDY_TX ||
-		    pins[i] < dev_desc->min_tx) {
+		if ((pins[i] > dev_desc->max_rx &&
+		     pins[i] < dev_desc->min_tx) ||
+		    pins[i] == IQS9150_RDY_TX || pins[i] > IQS9150_MAX_TX) {
 			dev_err(&client->dev, "Invalid %s TX pin: %u\n",
 				fwnode_get_name(tp_node), pins[i]);
 			return -EINVAL;
@@ -1935,7 +1934,7 @@ static int iqs9150_parse_alp(struct iqs9150_private *iqs9150,
 		dev_err(&client->dev, "Failed to count %s RX pins: %d\n",
 			fwnode_get_name(alp_node), count);
 		return count;
-	} else if (count > dev_desc->num_rx) {
+	} else if (count > dev_desc->max_rx + 1) {
 		dev_err(&client->dev, "Invalid number of %s RX pins\n",
 			fwnode_get_name(alp_node));
 		return -EINVAL;
@@ -1961,7 +1960,7 @@ static int iqs9150_parse_alp(struct iqs9150_private *iqs9150,
 				       pins[i] / BITS_PER_BYTE;
 			u8 bit_offs = pins[i] % BITS_PER_BYTE;
 
-			if (pins[i] > dev_desc->num_rx - 1) {
+			if (pins[i] > dev_desc->max_rx) {
 				dev_err(&client->dev, "Invalid %s RX pin: %u\n",
 					fwnode_get_name(alp_node), pins[i]);
 				return -EINVAL;
@@ -1976,7 +1975,7 @@ static int iqs9150_parse_alp(struct iqs9150_private *iqs9150,
 		dev_err(&client->dev, "Failed to count %s TX pins: %d\n",
 			fwnode_get_name(alp_node), count);
 		return count;
-	} else if (count > dev_desc->num_tx) {
+	} else if (count > IQS9150_NUM_TX) {
 		dev_err(&client->dev, "Invalid number of %s TX pins\n",
 			fwnode_get_name(alp_node));
 		return -EINVAL;
@@ -2000,9 +1999,10 @@ static int iqs9150_parse_alp(struct iqs9150_private *iqs9150,
 				       pins[i] / BITS_PER_BYTE;
 			u8 bit_offs = pins[i] % BITS_PER_BYTE;
 
-			if (pins[i] > IQS9150_MAX_TX ||
+			if ((pins[i] > dev_desc->max_rx &&
+			     pins[i] < dev_desc->min_tx) ||
 			    pins[i] == IQS9150_RDY_TX ||
-			    pins[i] < dev_desc->min_tx) {
+			    pins[i] > IQS9150_MAX_TX) {
 				dev_err(&client->dev, "Invalid %s TX pin: %u\n",
 					fwnode_get_name(alp_node), pins[i]);
 				return -EINVAL;
