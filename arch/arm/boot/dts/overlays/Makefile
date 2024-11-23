@@ -204,7 +204,9 @@ dtbo-$(CONFIG_ARCH_BCM2835) += \
 	pifi-dac-zero.dtbo \
 	pifi-mini-210.dtbo \
 	piglow.dtbo \
+	pimidi.dtbo \
 	pineboards-hat-ai.dtbo \
+	pineboards-hatdrive-poe-plus.dtbo \
 	piscreen.dtbo \
 	piscreen2r.dtbo \
 	pisound.dtbo \
@@ -217,7 +219,9 @@ dtbo-$(CONFIG_ARCH_BCM2835) += \
 	proto-codec.dtbo \
 	pwm.dtbo \
 	pwm-2chan.dtbo \
+	pwm-gpio.dtbo \
 	pwm-ir-tx.dtbo \
+	pwm-pio.dtbo \
 	pwm1.dtbo \
 	qca7000.dtbo \
 	qca7000-uart0.dtbo \
@@ -257,6 +261,7 @@ dtbo-$(CONFIG_ARCH_BCM2835) += \
 	spi-rtc.dtbo \
 	spi0-0cs.dtbo \
 	spi0-1cs.dtbo \
+	spi0-1cs-inverted.dtbo \
 	spi0-2cs.dtbo \
 	spi1-1cs.dtbo \
 	spi1-2cs.dtbo \
@@ -319,6 +324,7 @@ dtbo-$(CONFIG_ARCH_BCM2835) += \
 	vc4-kms-dsi-ili9881-7inch.dtbo \
 	vc4-kms-dsi-lt070me05000.dtbo \
 	vc4-kms-dsi-lt070me05000-v2.dtbo \
+	vc4-kms-dsi-waveshare-800x480.dtbo \
 	vc4-kms-dsi-waveshare-panel.dtbo \
 	vc4-kms-kippah-7inch.dtbo \
 	vc4-kms-v3d.dtbo \
