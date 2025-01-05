@@ -777,7 +777,7 @@ static int iqs626_parse_trackpad(struct iqs626_private *iqs626,
 		struct fwnode_handle *tc_node;
 		char tc_name[10];
 
-		snprintf(tc_name, sizeof(tc_name), "channel-%d", i);
+		scnprintf(tc_name, sizeof(tc_name), "channel-%d", i);
 
 		tc_node = fwnode_get_named_child_node(ch_node, tc_name);
 		if (!tc_node)
