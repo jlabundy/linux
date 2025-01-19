@@ -21,6 +21,7 @@
 #include <linux/module.h>
 #include <linux/of_device.h>
 #include <linux/property.h>
+#include <linux/regulator/consumer.h>
 #include <linux/slab.h>
 #include <linux/unaligned.h>
 
@@ -1231,6 +1232,13 @@ static int iqs7211_hard_reset(struct iqs7211_private *iqs7211)
 		iqs7211_irq_wait();
 
 	return iqs7211_irq_poll(iqs7211, IQS7211_START_TIMEOUT_US);
+}
+
+static void iqs7211_hold_reset(void *data)
+{
+	struct iqs7211_private *iqs7211 = data;
+
+	gpiod_set_value_cansleep(iqs7211->reset_gpio, 1);
 }
 
 static int iqs7211_force_comms(struct iqs7211_private *iqs7211)
@@ -2489,6 +2497,18 @@ static int iqs7211_probe(struct i2c_client *client)
 			return error;
 		}
 	}
+
+	error = devm_regulator_get_enable(&client->dev, "vdd");
+	if (error) {
+		dev_err(&client->dev, "Failed to request VDD regulator: %d\n",
+			error);
+		return error;
+	}
+
+	error = devm_add_action_or_reset(&client->dev, iqs7211_hold_reset,
+					 iqs7211);
+	if (error)
+		return error;
 
 	error = iqs7211_start_comms(iqs7211);
 	if (error)
